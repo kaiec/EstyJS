@@ -218,6 +218,8 @@ EstyJs.Keyboard = function (opts) {
     function mouseMove(evt) {
         mouseX = (evt.pageX - $("#" + output).offset().left);
         mouseY = (evt.pageY - $("#" + output).offset().top);
+        mouseX *= (640/htmlElement.offsetWidth)
+        mouseY *= (400/htmlElement.offsetHeight)
         switch (display.readScreenMode()) {
             // intentional fall through!
             case 0:
