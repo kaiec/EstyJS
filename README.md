@@ -1,5 +1,7 @@
 This is a forked version of the EstyJS Atari ST Emulator, written by [Darren Coles](https://github.com/dmcoles/EstyJs/).
 
+Test it live: https://kaiec.github.io/EstyJs/
+
 License information:
 - **processor.js** is based on code from [SAE](https://github.com/naTmeg/ScriptedAmigaEmulator), licensed under GPL V2. It is based on [WinUAE](https://github.com/tonioni/WinUAE) and [UAE](https://github.com/bernds/UAE/) respectively, both GPL V2.
 - **sound.js** used code from [DelphiSpec emulator](https://worldofspectrum.net/pub/sinclair/emulators/pc/windows/DelphiSpecSource03.zip), licensed under GPL V2.
