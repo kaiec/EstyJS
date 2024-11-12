@@ -42,6 +42,8 @@ EstyJs.Keyboard = function (opts) {
     var mouseXthreshold = 1;
     var mouseYthreshold = 1;
 
+    var display = null
+
     var invertY = false;
 
     var paused = false;
@@ -50,10 +52,10 @@ EstyJs.Keyboard = function (opts) {
 
     var keyCommands = new Array();
 
-    var oldMouseX = -10000;
-    var oldMouseY = -10000;
-    var mouseX = -1;
-    var mouseY = -1;
+    var oldMouseX = 160;
+    var oldMouseY = 100;
+    var mouseX = 160;
+    var mouseY = 100;
 
     var leftDown = false;
     var rightDown = false;
@@ -194,23 +196,36 @@ EstyJs.Keyboard = function (opts) {
           document.webkitPointerLockElement === requestedElement) {
             // Pointer was just locked
             // Enable the mousemove listener
-            document.onmousemove = mouseMove2;
+            htmlElement.onmousemove = mouseMove2;
             locked = true;
         } else {
             // Pointer was just unlocked
             // Disable the mousemove listener
-            document.onmousemove = mouseMove;
+            htmlElement.onmousemove = mouseMove;
             locked = false;
         }
     }
 
+    function mouseLeave(evt){
+        // console.log("Mouse left")
+        self.resetMouse()
+    }
+
+    function mouseEnter(evt) {
+        // console.log("Mouse entered: " + evt.mouseX +  "/" + evt.mouseY)
+    }
+
     function mouseMove(evt) {
-        mouseX = evt.pageX - $("#" + output).offset().left;
-        mouseY = evt.pageY - $("#" + output).offset().top;
-        if (oldMouseX == -10000) {
-            oldMouseX = mouseX;
-            oldMouseY = mouseY;
+        mouseX = (evt.pageX - $("#" + output).offset().left);
+        mouseY = (evt.pageY - $("#" + output).offset().top);
+        switch (display.readScreenMode()) {
+            // intentional fall through!
+            case 0:
+                mouseX >>= 1
+            case 1:
+                mouseY >>= 1
         }
+        // console.log("Mouse :" + mouseMode + "  " + mouseX + " / " + mouseY)
     }
 
     function mouseMove2(e) {
@@ -243,6 +258,10 @@ EstyJs.Keyboard = function (opts) {
                 evt.stopPropagation();
                 rightDown = true;
                 absRightDownSinceLast = true;
+                break;
+            case 1:
+                evt.stopPropagation();
+                self.resetMouse();
                 break;
         }
         evt.preventDefault();
@@ -516,19 +535,13 @@ EstyJs.Keyboard = function (opts) {
             dataOut.push(leftDown ? 128 : 0)
         }
 
+
         if (mouseMode == 'R' && !resetTime && port0Mouse) {
-            var xd = (mouseX - oldMouseX) >> 1;
-            var yd = (mouseY - oldMouseY) >> 1;
+            var xd = mouseX - oldMouseX;
+            var yd = mouseY - oldMouseY;
 
             if ((Math.abs(xd) > mouseXthreshold) || (Math.abs(yd) > mouseYthreshold) || oldLeftDown != leftDown || oldRightDown != rightDown) {
-                dataOut.push(0xf8 | (leftDown ? 2 : 0) | (rightDown ? 1 : 0)); //mouse buttons
-                dataOut.push(xd);
-                if (invertY) {
-                    dataOut.push(-yd);
-                } else {
-                    dataOut.push(yd);
-                }
-
+                self.moveMouse(xd, yd)
                 oldMouseX = mouseX;
                 oldMouseY = mouseY;
             }
@@ -871,16 +884,16 @@ EstyJs.Keyboard = function (opts) {
 
         }
 
-        oldLeftDown = leftDown;
-        oldRightDown = rightDown;
     }
 
     var htmlElement = document.getElementById(htmlControl);
     document.onkeydown = keyDown;
     document.onkeyup = keyUp;
     document.onkeypress = keyPress;
-    document.onmousemove = mouseMove;
+    htmlElement.onmousemove = mouseMove;
     htmlElement.onmousedown = mouseDown;
+    htmlElement.onmouseenter = mouseEnter;
+    htmlElement.onmouseleave = mouseLeave;
     htmlElement.onmouseup = mouseUp;
     htmlElement.oncontextmenu = function () {
         return false;
@@ -889,6 +902,38 @@ EstyJs.Keyboard = function (opts) {
     self.setSnapshotRegs = function (regs) {
         mouseMode = regs.mouseMode;
         joystickMode = regs.joystickMode;
+    }
+
+    self.resetMouse = function() {
+        self.moveMouse(640, 400)
+        mouseX = display.readScreenMode()==0?319:639;
+        mouseY=display.readScreenMode()==2?399:199;
+        oldMouseX = mouseX;
+        oldMouseY = mouseY;
+    }
+
+    self.moveMouse = function(dx, dy) {
+        // console.log("Moving mouse: " + dx + "/" + dy)
+        while (dx!=0  || dy!=0 || leftDown!=oldLeftDown || rightDown!=oldRightDown) {
+            // console.log("Step: " + dx + "/" + dy)
+            var dxb = Math.max(-127, Math.min(dx, 127))
+            var dyb = Math.max(-127, Math.min(dy, 127))
+            dataOut.push(0xf8 | (leftDown ? 2 : 0) | (rightDown ? 1 : 0));
+            dataOut.push(dxb);
+            if (invertY) {
+                dataOut.push(-dyb);
+            } else {
+                dataOut.push(dyb);
+            }
+            dx-=dxb
+            dy-=dyb
+            oldLeftDown = leftDown
+            oldRightDown = rightDown
+        }
+    }
+
+    self.setMousePos = function() {
+
     }
 
     self.lockMouse = function () {
@@ -927,6 +972,11 @@ EstyJs.Keyboard = function (opts) {
 
     self.mouseLocked = function () {
         return locked;
+    }
+
+
+    self.setDisplay = function (d) {
+        display = d;
     }
 
 

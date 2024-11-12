@@ -99,6 +99,7 @@ function EstyJs(output) {
 	});
 
     mfp.setDisplay(display);
+	keyboard.setDisplay(display);
     fdc.setMemory(memory);
 	io.setDisplay(display);	
 	processor.setup();
@@ -121,7 +122,7 @@ function EstyJs(output) {
 //var reqFrames = (currTime - startTime)/20;		
 			//while (frameCount< reqFrames)
 			{
-				display.startFrame();			
+				display.startFrame();
 				sound.startFrame();
 				processor.vblInterrupt();
 				keyboard.checkJoystick();
