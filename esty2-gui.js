@@ -4,7 +4,7 @@
 
 var estyjs = null;			
 
-setTimeout(mouseLocked, 250);
+setTimeout(mouseLocked, 1250);
 
 function reset() {
 	estyjs.reset();
@@ -108,26 +108,18 @@ function lockMouse() {
 function mouseLocked() {
     var locked = estyjs.getMouseLocked();
     if (locked) {
-        $("#btnLocked span").text("Unlock");
+        document.querySelector("#btnLocked span").innerHTML = "Unlock";
     }
     else {
-        $("#btnLocked span").text("Lock");
+        document.querySelector("#btnLocked span").innerHTML = "Lock";
     }
     setTimeout(mouseLocked, 250);
 
 }
 
 function fullScreen() {
-    if ($('#accordion').is(':hidden')) {
-        $("#accordion").show();
-        $("#EstyJsOutput").width(640);
-        $("#estyjs").css("left", 420);
-        $("#btnFullscreen span").text("Expand");
-    }
-    else {
-        $("#accordion").hide();
-        $("#EstyJsOutput").width(window.innerWidth-80);
-        $("#estyjs").css("left", 20);
-        $("#btnFullscreen span").text("Shrink");
-    }
+        const elem = document.getElementById("EstyJsOutput");
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        }
 }

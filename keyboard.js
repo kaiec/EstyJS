@@ -216,8 +216,8 @@ EstyJs.Keyboard = function (opts) {
     }
 
     function mouseMove(evt) {
-        mouseX = (evt.pageX - $("#" + output).offset().left);
-        mouseY = (evt.pageY - $("#" + output).offset().top);
+        mouseX = (evt.pageX - htmlElement.offsetLeft);
+        mouseY = (evt.pageY - htmlElement.offsetTop);
         mouseX *= (640/htmlElement.offsetWidth)
         mouseY *= (400/htmlElement.offsetHeight)
         switch (display.readScreenMode()) {
@@ -669,10 +669,10 @@ EstyJs.Keyboard = function (opts) {
 
                     dataOut.push(0xf7);
                     dataOut.push(0 | (absLeftUpSinceLast ? 8 : 0) | (absLeftDownSinceLast ? 4 : 0) | (absRightUpSinceLast ? 2 : 0) | (absRightDownSinceLast ? 1 : 0));
-                    dataOut.push(Math.floor((mouseX / $("#" + output).width() * mouseXmax) >> 8));
-                    dataOut.push(Math.floor((mouseX / $("#" + output).width() * mouseXmax) & 0xff));
-                    dataOut.push(Math.floor((mouseY / $("#" + output).height() * mouseYmax) >> 8));
-                    dataOut.push(Math.floor((mouseY / $("#" + output).height() * mouseYmax) & 0xff));
+                    dataOut.push(Math.floor((mouseX / htmlElement.width() * mouseXmax) >> 8));
+                    dataOut.push(Math.floor((mouseX / htmlElement.width() * mouseXmax) & 0xff));
+                    dataOut.push(Math.floor((mouseY / htmlElement.height() * mouseYmax) >> 8));
+                    dataOut.push(Math.floor((mouseY / htmlElement.height() * mouseYmax) & 0xff));
                     absLeftDownSinceLast = false;
                     absLeftUpSinceLast = false;
                     absRightDownSinceLast = false;

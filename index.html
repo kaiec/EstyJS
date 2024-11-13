@@ -1,127 +1,126 @@
 ﻿<!DOCTYPE HTML>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta name="description" content="Javascript based Atari ST Emulator">
-<meta name="keywords" content="JavaScript, Atari, ST, Emulator, EstyJs">
-<meta name="author" content="Darren Coles">
-<html>
-	<head>
-		<title>EstyJs</title>
-		<link href='http://fonts.googleapis.com/css?family=Fauna+One' rel='stylesheet' type='text/css'>
-		<link rel="stylesheet" type="text/css" href="css/estyjs.css" />
-		<link href="css/jquery-ui-1.10.3.custom.min.css" type="text/css" rel="stylesheet">
-		<script src="jquery/jquery-1.9.1.js"></script>
-		<script src="jquery/jquery-ui-1.10.3.custom.min.js"></script>
+<html lang="en">
 
-		<script src="estyjs.js"></script>
-		<script src="processor.js"></script>
-		<script src="keyboard.js"></script>
-		<script src="mfp.js"></script>
-		<script src="fdc.js"></script>
-		<script src="io.js"></script>
-		<script src="bug.js"></script>
-		<script src="display.js"></script>
-		<script src="memory.js"></script>
-		<script src="snapshot.js"></script>
-		<script src="sound.js"></script>
-		<script src="main.js"></script>
-        <script src="files.js"></script>
-        <script src="js-unzip.js"></script>
-        <script src="rawinflate.js"></script>
-		
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta name="description" content="Javascript based Atari ST Emulator">
+	<meta name="keywords" content="JavaScript, Atari, ST, Emulator, EstyJs">
+	<meta name="author" content="Darren Coles">
+	<title>EstyJs</title>
+	<link rel="stylesheet" type="text/css" href="css/estyjs2.css">
+	<script src="esty2-gui.js"></script>
 
-		<script>
-			$(function() {
-				$("button").button();
-				document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
-				document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
-				$("#accordion").accordion();
-				estyjs = EstyJs("EstyJsOutput");
-                estyjs.setRowSkip(false);
-			});
-		</script>
-	</head>
-	<body>
-		<header>EstyJS - The Javascript Atari ST Emulator</header>
-		<div id="accordion">
-			<h3>Atari ST</h3>
-			<div>	
-                <img src="Atari_1040STf.jpg"/>
-                The Atari ST was a 16 bit home computer that was very popular in the late 80's and early 90's.
-                It was the direct competitor of the Commodore Amiga and both machines were based upon the 68000 cpu.
-				<br/><br/>
-                It was first released in 1985 and was very sucessful in the professional music industry due to having MIDI ports as standard.						
-			</div>
-			<h3>EstyJS</h3>
-			<div>EstyJS is a javascript based emulator for the Atari ST. I was inspired to write this after completing the first release of my Acorn Electron emulator ElkJS.
-			<br/><br/>
-			<img src="Atari 520ST_inside.jpg"/><br/><br/>
-			EstyJS aims to emulate the ST accurately enough to be able to play many of the classic games made for this machine.
-			<br/><br />
-			The sourcecode for this emulator is available in my <a href="https://github.com/dmcoles/estyjs" >github</a> repository.
-			
-			<br/><br/>
-            Please visit my forum to leave feedback, report bugs, talk about these (and other) JavaScript emulators <a href="http://emulatejs.englishboard.net/" >EmulateJS</a>
-			</div>
-			<h3>Usage</h3>
-            <div>
-				Work in progress<br/><br/>
-				Currently there are some things not emulated:
-				<ol>
-					<li>writing to floppies</li>
-					<li>Partial keyboard/mouse/joystick</li>
-					<li>timer pulse width & high accuracy < 1 scanline </li>
-					<li>border effects</li>
-				</ol>
-                <br/>
-				Hints:<br/>
-				<br/>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad).
-				<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
-			</div>
-			
-			<h3>Credits</h3>
-			<div>
-			<u>EstyJS</u><br/><br/>
-			68000 emulation core - Rupert Hausberger (adapted from <a href="http://scriptedamigaemulator.net/">SAE</a> adaptation by Darren Coles)<br/><br/>
-			Atari ST image from wikipedia by <a href="http://en.wikipedia.org/wiki/File:Atari_1040STf.jpg"> Bill Bertram </a> <br/><br/>
-			Atari ST internals image from <a href="http://retrospec.sgn.net/users/tomcat/miodrag/Atari_ST/Atari_ST.htm" >retrospec</a>  <br/><br/>
-			Everything else - (c) Darren Coles 2013.<br/><br/>
-			</div>
-        </div>
-		<div id="estyjs">
-			<canvas id = "EstyJsOutput" width="640" height="400" >
+	<script src="estyjs.js"></script>
+	<script src="processor.js"></script>
+	<script src="keyboard.js"></script>
+	<script src="mfp.js"></script>
+	<script src="fdc.js"></script>
+	<script src="io.js"></script>
+	<script src="bug.js"></script>
+	<script src="display.js"></script>
+	<script src="memory.js"></script>
+	<script src="snapshot.js"></script>
+	<script src="sound.js"></script>
+	<script src="files.js"></script>
+	<script src="js-unzip.js"></script>
+	<script src="rawinflate.js"></script>
+
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function (event) {
+			// Your code to run since DOM is loaded and ready
+			console.log("Loaded")
+			document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
+			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
+			estyjs = EstyJs("EstyJsOutput");
+			estyjs.setRowSkip(false);
+		});
+	</script>
+</head>
+
+<body>
+	<div id="estyjs">
+		<div id="screen">
+			<canvas id="EstyJsOutput" width="640" height="400">
 			</canvas>
-			<div id = "buttonpanel">
-                <small><button id="btnFullscreen" onclick="fullScreen();">Expand</button></small>
-                <small><button id="btnLocked" onclick="lockMouse();">Lock</button></small>
-                <small><button onclick="reset()" id="btnReset">Reset</button></small>
-                <small><button onclick="pauseResume()" id="btnPause">Pause</button></small>
-                <small><button onclick="soundToggle()" id="btnSound">Turn sound on</button></small>
-                <br />
-                <div style="margin: 0px; padding:0px; clear: both; height: 6px">
-                    &nbsp;
-                </div>
-                <input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;" />
-                <input type="file" id="selectedFileB" accept=".sts,.st,.msa,.zip" style="display: none;" />
-                <select id="diskImages">
-                    <option value="filename.st">Name of the Disk</option>
-                </select>
-                <small><button onclick="openFileInDrive($('#diskImages').val(),'A');" id="Button1">Drive A</button></small>
-                <small><button onclick="openFileInDrive($('#diskImages').val(),'B');" id="Buttonw">Drive B</button></small>
-                <small><button onclick="document.getElementById('selectedFile').click();" id="btnBrowse">Browse (A)</button></small>
-                <small><button onclick="document.getElementById('selectedFileB').click();" id="Button2">Browse (B)</button></small>
-                <small><button onclick="openFile()" style="display: none;" id="btnOpen">Open</button></small>
-                <br />
-                <div style="margin: 0px; padding:0px; clear: both; height: 6px">
-                    &nbsp;
-                </div>
-                <input type="checkbox" id="joystick" checked="checked" onclick="changeJoystick()">Joystick</input>
-                <input type="checkbox" id="showpct"  onclick="changeShowPct()">Show Speed</input>
-                <input type="checkbox" id="frameskip"  onclick="changeFrameskip()">Frameskip</input>
-                <input type="checkbox" id="ram" checked="checked" onclick="changeRamSize()">1Meg</input>
-            </div>
 		</div>
-		
-		
-	</body>
+		<div id="buttonpanel">
+			<div id="logo">
+				<img src="img/logo.png" alt="EstyJS Logo">
+			</div>
+			<button id="btnFullscreen" onclick="fullScreen();"><span>Expand</span></button>
+			<button id="btnLocked" onclick="lockMouse();"><span>Lock</span></button>
+			<button onclick="reset()" id="btnReset"><span>Reset</span></button>
+			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
+			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
+			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;">
+			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.zip" style="display: none;">
+			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><span>Browse
+					(A)</span></button>
+			<button onclick="document.getElementById('selectedFileB').click();" id="Button2"><span>Browse
+					(B)</span></button>
+			<button onclick="openFile()" style="display: none;" id="btnOpen"><span>Open</span></button>
+		</div>
+
+		<div id="settings">
+			<input type="checkbox" id="joystick" checked="checked" onclick="changeJoystick()">Joystick
+			<input type="checkbox" id="showpct" onclick="changeShowPct()">Show Speed
+			<input type="checkbox" id="frameskip" onclick="changeFrameskip()">Frameskip
+			<input type="checkbox" id="ram" checked="checked" onclick="changeRamSize()">1Meg
+		</div>
+	</div>
+
+	<div id="content">
+		<h2>Atari ST</h2>
+		<p>
+			<img src="Atari_1040STf-600.png" style="float:right;" alt="Photo of an Atari ST">
+			The Atari ST was a 16 bit home computer that was very popular in the late 80's and early 90's.
+			It was the direct competitor of the Commodore Amiga and both machines were based upon the 68000 CPU.
+			It was first released in 1985 and was very sucessful in the professional music industry due to having MIDI
+			ports as standard.
+		</p>
+		<h2>EstyJS 2.0</h2>
+		<p>EstyJS is an emulator for the Atari ST, written in 100% pure JavaScript, originally developed by Darren
+			Coles. Since 2024 and the release of EstyJS 2.0,
+			the project is maintained by Kai Eckert. The source code is available on <a
+				href="https://github.com/kaiec/EstyJs">GitHub</a>. Please use GitHub issues for feedback, bugs and
+			ideas.
+		</p>
+		<p>
+			EstyJS is not a full emulation and focuses on running games or old software for demonstration purposes.
+			Notable limitations:
+		</p>
+		<ul>
+			<li>No writing to floppies.</li>
+			<li>Only partial support of keyboard/mouse/joystick.</li>
+			<li>Timer pulse width & high accuracy &lt; 1 scanline is not supported.</li>
+			<li>No border effects (as used by some demos), only the official resolutions are supported.</li>
+		</ul>
+		<h2>Usage</h2>
+		<ul>
+			<li>Use the "Browse" buttons to load a floppy image (.st or .sts files are supported)</li>
+			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
+			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad).</li>
+		</ul>
+
+
+
+		<h2>Credits</h2>
+		<ul>
+			<li>EstyJS 2.0 since 2024 by <a href="https://github.com/kaiec/EstyJs">Kai Eckert</a>.</li>
+			<li>EstyJS 1.0 (2013 - 2024) by <a href="https://github.com/dmcoles/EstyJs">Darren Coles</a>.</li>
+			<li><a href="https://emutos.sourceforge.io/">EmuTOS</a> is the open source implementation of the original
+				Atari TOS operating system and used by default in EstyJS (but the original TOS works, too!).</li>
+			<li>68000 emulation core - Rupert Hausberger (adapted from <a
+					href="http://scriptedamigaemulator.net/">SAE</a> by Darren Coles).</li>
+			<li>Atari ST image from Wikipedia by <a href="http://en.wikipedia.org/wiki/File:Atari_1040STf.jpg">Bill
+					Bertram.</a></li>
+			<li>The font used on this page is <a href="https://github.com/sporniket/Sporniket-Nostalgie-Sans">Sporniket
+					Nostalgie v2</a>, inspired by the Atari ST system font.</li>
+		</ul>
+	</div>
+
+
+</body>
+
 </html>
-	
