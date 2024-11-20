@@ -1,17 +1,33 @@
+/*
+
+This file is part of EstyJS.
+
+EstyJS is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 2 of the License, or (at your option) any later
+version.
+
+EstyJS is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+EstyJS. If not, see <https://www.gnu.org/licenses/>. 
+
+Get in touch: https://github.com/kaiec/EstyJS
+
+Original author (2013-2024): Darren Coles
+Current maintainer (since 2024): Kai Eckert
+*/
+
 
 // 68000 cpu emulator code for EstyJs
-// adapted from SAE - Scripted Amiga Emulator by Darren Coles
+// adapted from SAE - Scripted Amiga Emulator, created by Rupert Hausberger
+// https://github.com/naTmeg/ScriptedAmigaEmulator
+// Originally licensed under GPL v2 or later
 "use strict";
 
 /**************************************************************************
-* SAE - Scripted Amiga Emulator
-*
-* https://github.com/naTmeg/ScriptedAmigaEmulator
-*
-* ©2012 Rupert Hausberger
-* Commercial use is prohibited.
-*
-***************************************************************************
 *
 * TODO:
 * - Faster versions of ASx/LSx/ROx/ROXx and xBCD
