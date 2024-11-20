@@ -106,7 +106,12 @@ function lockMouse() {
 }
 
 function mouseLocked() {
-    var locked = estyjs.getMouseLocked();
+    var locked;
+    if (estyjs==null) {
+        locked = false;
+    } else {
+        locked = estyjs.getMouseLocked();
+    }
     if (locked) {
         document.querySelector("#btnLocked span").innerHTML = "Unlock";
     }
@@ -122,4 +127,36 @@ function fullScreen() {
         if (elem.requestFullscreen) {
             elem.requestFullscreen();
         }
+}
+
+function splashScreen(filename, callback) {
+    const elem = document.getElementById("EstyJsOutput");
+    const ctx = elem.getContext('2d');
+    const img = new Image();
+    img.src = filename; 
+    ctx.fillStyle ="rgb(0 0 0)";
+    img.onload = () => {
+        var alpha = 0;
+        var da = 0.01;
+        function draw() {
+            alpha += da;
+            if (alpha > 1) {
+                da = -da;
+                alpha += da;
+                return setTimeout(draw, 1000);
+            }
+            ctx.globalAlpha = 1;
+            ctx.fillRect(0,0,elem.clientWidth, elem.clientHeight);
+            var dx = (elem.clientWidth-img.width)/2;
+            var dy = (elem.clientHeight-img.height)/2;
+            ctx.globalAlpha = alpha
+            if (alpha>0) {
+                ctx.drawImage(img, dx, dy);
+                requestAnimationFrame(draw);
+            } else {
+                setTimeout(callback, 1000);
+            }
+        }
+        setTimeout(draw, 1000);
+    }
 }

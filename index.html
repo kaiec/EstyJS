@@ -32,8 +32,10 @@
 			console.log("Loaded")
 			document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
 			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
-			estyjs = EstyJs("EstyJsOutput");
-			estyjs.setRowSkip(false);
+			splashScreen('img/logo.png', function(){
+				estyjs = EstyJs("EstyJsOutput");
+				estyjs.setRowSkip(false);
+			});
 		});
 	</script>
 </head>
