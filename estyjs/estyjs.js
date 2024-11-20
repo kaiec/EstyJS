@@ -14,6 +14,10 @@ PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 EstyJS. If not, see <https://www.gnu.org/licenses/>. 
 
+Get in touch: https://github.com/kaiec/EstyJS
+
+Original author (2013-2024): Darren Coles
+Current maintainer (since 2024): Kai Eckert
 */
 
 
