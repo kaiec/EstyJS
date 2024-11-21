@@ -1,7 +1,0 @@
-[ ] keyboard
-[ ] joystick
-[ ] disk
-[ ] snapshot
-[ ] timer A D
-[ ] finish mfp
-[ ] 
