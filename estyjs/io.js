@@ -263,7 +263,7 @@ EstyJs.io = function (opts) {
             return;
         }
 
-        if ((addr & 0xFFFA00) == 0xFFFA00) {
+        if ((addr & 0xFFFF00) == 0xFFFA00) {
             mfp.writeData(addr, val);
             return;
         }
@@ -396,7 +396,7 @@ EstyJs.io = function (opts) {
         }
 
 
-        if ((addr & 0xFFFA00) == 0xFFFA00) {
+        if ((addr & 0xFFFF00) == 0xFFFA00) {
             return mfp.readData(addr);
         }
 
