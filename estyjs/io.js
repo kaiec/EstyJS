@@ -289,6 +289,10 @@ EstyJs.io = function (opts) {
             throw "memory error";
         }
 
+        if ((addr & 0xFFFF00) == 0xFFFE00) {
+            throw "memory error";
+        }
+
         if ((addr & 1) == 0) return;
 
         //bug.say(sprintf('invalid io write $%06x', addr));
@@ -426,6 +430,10 @@ EstyJs.io = function (opts) {
         }
 
         if ((addr & 0xFFFF00) == 0xFF8900) {
+            return; //return undefined
+        }
+
+        if ((addr & 0xFFFF00) == 0xFFFE00) {
             return; //return undefined
         }
 
