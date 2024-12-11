@@ -263,7 +263,7 @@ EstyJs.io = function (opts) {
             return;
         }
 
-        if ((addr & 0xFFFA00) == 0xFFFA00) {
+        if ((addr & 0xFFFF00) == 0xFFFA00) {
             mfp.writeData(addr, val);
             return;
         }
@@ -286,6 +286,10 @@ EstyJs.io = function (opts) {
         }
 
         if ((addr & 0xFFFF00) == 0xFF8A00) {
+            throw "memory error";
+        }
+
+        if ((addr & 0xFFFF00) == 0xFFFE00) {
             throw "memory error";
         }
 
@@ -396,7 +400,7 @@ EstyJs.io = function (opts) {
         }
 
 
-        if ((addr & 0xFFFA00) == 0xFFFA00) {
+        if ((addr & 0xFFFF00) == 0xFFFA00) {
             return mfp.readData(addr);
         }
 
@@ -426,6 +430,10 @@ EstyJs.io = function (opts) {
         }
 
         if ((addr & 0xFFFF00) == 0xFF8900) {
+            return; //return undefined
+        }
+
+        if ((addr & 0xFFFF00) == 0xFFFE00) {
             return; //return undefined
         }
 
