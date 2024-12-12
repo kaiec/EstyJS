@@ -62,7 +62,7 @@ EstyJs.Memory = function (opts) {
     }
 
 
-    load_binary_resource('./emutos.img');
+    load_binary_resource('./etos256us.img');
 
     self.readByte = function (addr) {
         //0 - 00CFFFFF max 14mb of ram
