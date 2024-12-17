@@ -57,13 +57,12 @@
 			<button onclick="colorToggle()" id="btnColor"><span>Screen</span></button>
 			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
 			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
+		</div>
+		<div id="floppies">
 			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;">
 			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.zip" style="display: none;">
-			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><span>Browse
-					(A)</span></button>
-			<button onclick="document.getElementById('selectedFileB').click();" id="Button2"><span>Browse
-					(B)</span></button>
-			<button onclick="openFile()" style="display: none;" id="btnOpen"><span>Open</span></button>
+			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-1" width="300" height="83"/><div>DISK A</div></button>
+			<button onclick="document.getElementById('selectedFileB').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-2" width="300" height="83"/><div>DISK B</div></button>
 		</div>
 
 		<div id="settings">
@@ -102,7 +101,7 @@
 		</ul>
 		<h2>Usage</h2>
 		<ul>
-			<li>Use the "Browse" buttons to load a floppy image (.st or .sts files are supported)</li>
+			<li>Click the floppy drives to load a floppy image (.st or .sts files are supported)</li>
 			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
 			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad).</li>
 		</ul>

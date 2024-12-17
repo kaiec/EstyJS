@@ -13,10 +13,10 @@ function reset() {
 function pauseResume() {
 	var running = estyjs.pauseResume();
 	if (running) {
-		$("#btnPause span").text("Pause");
+		document.querySelector("#btnPause span").innerHTML = "Pause";
 	}
 	else {
-		$("#btnPause span").text("Resume");
+		document.querySelector("#btnPause span").innerHTML = "Resume";
 	}
 }
 
@@ -32,6 +32,7 @@ function fileSelected(evt) {
 			} else if (ext == '.zip') {
 			    estyjs.openZipFile('A', files[0]);
 			}
+            document.querySelector("#floppy-1").src = 'img/floppy-active.png';
 		}
 	}
 	
@@ -49,6 +50,7 @@ function fileSelected2(evt) {
             } else if (ext == '.zip') {
                 estyjs.openZipFile('B', files[0]);
             }
+            document.querySelector("#floppy-2").src = 'img/floppy-active.png';
         }
     }
 
@@ -61,10 +63,10 @@ function colorToggle() {
 function soundToggle() {
 	var sound = estyjs.soundToggle();
 	if (sound) {
-		$("#btnSound span").text("Turn sound off");
+		document.querySelector("#btnSound span").innerHTML = "Sound off";
 	}
 	else {
-		$("#btnSound span").text("Turn sound on");
+		document.querySelector("#btnSound span").innerHTML = "Sound on";
 	}
 }
 
@@ -74,18 +76,6 @@ function openFile(fname) {
 
 function openFileInDrive(fname,drive) {
 	estyjs.openFloppyFile(drive, fname);
-}
-
-function openFile2() {
-    estyjs.openSnapshotFile('rick_dangerous.sts');
-}
-
-function openFile3() {
-	estyjs.openSnapshotFile('dmaster.sts');
-}
-
-function openFile4() {
-    estyjs.openSnapshotFile('speedball2.sts');
 }
 
 function changeJoystick() {

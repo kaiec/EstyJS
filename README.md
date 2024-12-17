@@ -10,7 +10,7 @@ EstyJS 2.0 runs here: [https://kaiec.github.io/EstyJS/](https://kaiec.github.io/
 - Fully working mouse pointer synchronisation.
 - Fullscreen mode.
 - All lines of the display are rendered, instead of only every other line to create a scan line effect. The scan line effect can still be activated if desired.
-- EmuTOS 1.3 192k is used as ROM, so that EstyJS is fully open source and does not use any proprietary software.
+- EmuTOS 1.3 256k is used as ROM, so that EstyJS is fully open source and does not use any proprietary software.
 - Design of the new logo.
 - Redesign of the default website.
 

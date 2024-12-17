@@ -28,6 +28,7 @@
 #buttonpanel
 {
 	display: flex;
+	margin-left: 30px;
 }
 
 body
@@ -59,8 +60,8 @@ canvas
 }
 
 
-button {
-	background-color: #8E98A2;
+#buttonpanel button {
+	background-color: #aaa9aa;
 	border-color:#000000;
 	border-width: 2px;
 	border-style: groove;
@@ -75,17 +76,17 @@ button {
 	height:62px;
 }
   
-button:hover {
+#buttonpanel button:hover {
 	 bottom:-5px;
 	 position: relative;
 	 box-shadow:0px 0px 5px rgba(0,0,0,.5);
   }
   
-button {
+#buttonpanel button {
 	transform: skew(-40deg);
   }
   
-button span {
+#buttonpanel button span {
 	display:inline-block;
 	transform: skew(40deg);
   }
@@ -97,4 +98,23 @@ button span {
 #content {
 	width: 1000px;
 	margin: auto;
+}
+
+#floppies {
+	margin-left:243px;
+}
+
+#floppies button {
+	margin: 10px 15px 10px 0px;
+	padding: 0px;
+	border: 0px;
+}
+#floppies button div {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 22px;
+}
+
+#floppy-1, #floppy-2{
+	box-shadow:5px 5px 5px rgba(0,0,0,.8);
 }
