@@ -235,6 +235,14 @@ function EstyJs(output) {
 		display.setFrameskip(frameSkipEnabled);
 	}
 
+	self.setMonoMonitor = function (monoMonitor) {
+		mfp.setMonoMonitor(monoMonitor);
+	}
+
+	self.getMonoMonitor = function () {
+		return mfp.getMonoMonitor();
+	}
+
 	self.setMemory = function (mem1mb) {
 		if (mem1mb) {
 			memory.setMemSize(1024);

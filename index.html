@@ -35,6 +35,7 @@
 			splashScreen('img/logo.png', function(){
 				estyjs = EstyJs("EstyJsOutput");
 				estyjs.setRowSkip(false);
+				estyjs.setMonoMonitor(false);
 			});
 		});
 	</script>
@@ -53,6 +54,7 @@
 			<button id="btnFullscreen" onclick="fullScreen();"><span>Expand</span></button>
 			<button id="btnLocked" onclick="lockMouse();"><span>Lock</span></button>
 			<button onclick="reset()" id="btnReset"><span>Reset</span></button>
+			<button onclick="colorToggle()" id="btnColor"><span>Screen</span></button>
 			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
 			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
 			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;">

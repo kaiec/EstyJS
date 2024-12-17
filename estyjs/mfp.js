@@ -755,5 +755,13 @@ EstyJs.mfp = function (opts) {
 
     }
 
+    self.setMonoMonitor = function(value) {
+        monoMonitor = value;
+    }
+
+    self.getMonoMonitor = function() {
+        return monoMonitor;
+    }
+
     return self;
 }

@@ -54,6 +54,10 @@ function fileSelected2(evt) {
 
 }
 
+function colorToggle() {
+    estyjs.setMonoMonitor(!estyjs.getMonoMonitor());
+}
+
 function soundToggle() {
 	var sound = estyjs.soundToggle();
 	if (sound) {
