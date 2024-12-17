@@ -6,17 +6,17 @@
 #estyjs
 {
 	margin: auto;
-	width: 1000px;
+	width: 1040px;
 }
 
 #screen
 {
-	background-image: url('../img/sc1224-bg.png');
+	background-image: url('../img/sm124-sc-bg.png');
 	background-clip: padding-box;
 	border-width: 0;
-	background-size: 923px 745px;
+	background-size: 1000px 808px;
 	background-origin: padding-box;
-	padding: 170px 150px 175px 133px;
+	padding: 206px 0px 200px 175px;
 	background-repeat: no-repeat;
 }
 
@@ -28,7 +28,7 @@
 #buttonpanel
 {
 	display: flex;
-	margin-left: 30px;
+	margin-left: 60px;
 }
 
 body
@@ -68,8 +68,8 @@ canvas
 	color: white;
 	border-width: 3px;
 	box-shadow:5px 5px 5px rgba(0,0,0,.8);
-	display:inline-block;
-	padding:5px 15px 5px 10px;
+	display:inline-flex;
+	padding:3px 5px 5px 22px;
 	text-decoration:none;
 	margin:0px -2px 0px -2px;
 	width:100px;
@@ -101,7 +101,7 @@ canvas
 }
 
 #floppies {
-	margin-left:243px;
+	margin-left:273px;
 }
 
 #floppies button {

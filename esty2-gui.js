@@ -58,6 +58,12 @@ function fileSelected2(evt) {
 
 function colorToggle() {
     estyjs.setMonoMonitor(!estyjs.getMonoMonitor());
+    if (estyjs.getMonoMonitor()) {
+        document.querySelector("#screen").style.backgroundImage = "url('img/sm124-bg.png')";
+    } else {
+        document.querySelector("#screen").style.backgroundImage = "url('img/sm124-sc-bg.png')";
+        
+    }
 }
 
 function soundToggle() {
