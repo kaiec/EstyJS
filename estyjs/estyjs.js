@@ -93,6 +93,7 @@ function EstyJs(output) {
 
 	var memory = EstyJs.Memory({
 		io: io,
+		fileManager: fileManager,
 		bug: bug
 	});
 
@@ -194,6 +195,11 @@ function EstyJs(output) {
 			soundInit = true;
 		}
 		return soundEnabled;
+	}
+
+	self.changeTOS = function (file) {
+		memory.changeTOS(file);
+		this.reset()
 	}
 
 	self.openSnapshotFile = function (file) {

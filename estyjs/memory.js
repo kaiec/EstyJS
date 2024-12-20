@@ -38,6 +38,7 @@ EstyJs.Memory = function (opts) {
     var io = opts.io;
     var bug = opts.bug;
 
+    var fileManager = opts.fileManager;
 
     var processor = null;
 
@@ -54,11 +55,19 @@ EstyJs.Memory = function (opts) {
             if (arrayBuffer) {
                 rom = arrayBuffer;
                 romDataView = new DataView(rom);
-                self.loaded++;
+                self.loaded=1;
             }
         };
 
         oReq.send(null);
+    }
+
+    function load_array_buffer(arrayBuffer) {
+        console.log("New TOS: " + arrayBuffer.byteLength)
+        rom = arrayBuffer;
+        romDataView = new DataView(rom);
+        self.loaded=1;
+        estyjs.reset()
     }
 
 
@@ -264,6 +273,10 @@ EstyJs.Memory = function (opts) {
 
     self.getRamDv = function () {
         return ramDataView;
+    }
+
+    self.changeTOS = function(file) {
+        fileManager.loadFile(file, load_array_buffer)
     }
 
     return self;

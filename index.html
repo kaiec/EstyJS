@@ -32,6 +32,7 @@
 			console.log("Loaded")
 			document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
 			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
+			document.getElementById('selectedTOS').addEventListener('change', tosSelected, false);
 			splashScreen('img/logo.png', function(){
 				estyjs = EstyJs("EstyJsOutput");
 				estyjs.setRowSkip(false);
@@ -57,8 +58,10 @@
 			<button onclick="colorToggle()" id="btnColor"><span>Screen</span></button>
 			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
 			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
+			<input type="file" id="selectedTOS" accept=".img" style="display: none;">
 		</div>
 		<div id="floppies">
+			<button onclick="document.getElementById('selectedTOS').click();" id="btnTOS"><img src="img/rom.png" id="rom" width="176" height="83"><div>ROM</div></button>
 			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;">
 			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.zip" style="display: none;">
 			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-1" width="300" height="83"/><div>DISK A</div></button>

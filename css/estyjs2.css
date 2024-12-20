@@ -101,11 +101,12 @@ canvas
 }
 
 #floppies {
-	margin-left:273px;
+	margin-left:35px;
+	margin-top: 10px;
 }
 
 #floppies button {
-	margin: 10px 15px 10px 0px;
+	margin: 10px 0px 10px 25px;
 	padding: 0px;
 	border: 0px;
 }
@@ -115,6 +116,6 @@ canvas
 	font-size: 22px;
 }
 
-#floppy-1, #floppy-2{
+#floppy-1, #floppy-2, #rom{
 	box-shadow:5px 5px 5px rgba(0,0,0,.8);
 }

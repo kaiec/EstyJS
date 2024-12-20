@@ -20,6 +20,20 @@ function pauseResume() {
 	}
 }
 
+
+function tosSelected(evt) {
+	var files = evt.target.files;
+	if (files.length>0) {
+		if (files[0].name.lastIndexOf('.')!=-1) {
+			var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
+			if (ext == '.img') {
+			    estyjs.changeTOS(files[0]);
+			}
+		}
+	}
+	
+}
+
 function fileSelected(evt) {
 	var files = evt.target.files;
 	if (files.length>0) {
