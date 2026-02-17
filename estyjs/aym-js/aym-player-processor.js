@@ -1,253 +1,473 @@
 /*
+ * aym-player-processor.js - Copyright (c) 2001-2025 - Olivier Poncet
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-This file is part of EstyJS.
+import { AYM_Emulator } from './aym-emulator.js';
+import { AYM_Playlist } from './aym-playlist.js';
 
-EstyJS is free software: you can redistribute it and/or modify it under the
-terms of the GNU General Public License as published by the Free Software
-Foundation, either version 2 of the License, or (at your option) any later
-version.
+// ---------------------------------------------------------------------------
+// Some useful constants
+// ---------------------------------------------------------------------------
 
-EstyJS is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
+const AYM_FLAG_RESET = 0x01;
+const AYM_FLAG_PAUSE = 0x02;
+const AYM_FLAG_MUTEA = 0x10;
+const AYM_FLAG_MUTEB = 0x20;
+const AYM_FLAG_MUTEC = 0x40;
 
-You should have received a copy of the GNU General Public License along with
-EstyJS. If not, see <https://www.gnu.org/licenses/>.
+// ---------------------------------------------------------------------------
+// AYM_Processor
+// ---------------------------------------------------------------------------
 
-Get in touch: https://github.com/kaiec/EstyJS
-
-Original author (2013-2024): Darren Coles
-Current maintainer (since 2024): Kai Eckert
-*/
-
-"use strict";
-
-import { AYM_Emulator } from './aymjs/aym-emulator.js';
-
-EstyJs.Sound = function (opts) {
-    var self = {};
-
-    var bug = opts.bug;
-    var fdc = opts.fdc;
-
-    // The Atari ST clocks the YM2149 at 2 MHz.
-    // AYM_Emulator.clock() accepts one master-clock tick and divides internally
-    // by 8, so we simply drive it at the full master clock rate.
-    var MASTER_CLOCK = 2000000;
-
-    // 44100 Hz output, locked to 50 Hz frame rate
-    var samplesPerFrame = 882;           // 44100 / 50
-    var sampleRate      = samplesPerFrame * 50; // 44100
-
-    var audioContext = null;
-    var audioNode    = null;
-    var audioOutput  = null;   // legacy mozAudio fallback
-    var audioBuffer  = null;
-
-    var soundEnabled = true;
-
-    // Currently latched PSG register number (set by selectRegister)
-    var regSelect = 0;
-
-    var soundDataFrameBytes = 0;
-    var frameCount          = 0;
-    var rowCount            = 0;
-
-    var processor = null;
-
-    var lastWritten = new Date();
-
-    // Sub-sample clocking accumulator — avoids floating-point drift
-    var chip_ticks = 0;
-
-    // YM2149 emulator instance in YM DAC mode
-    var chip = new AYM_Emulator({ type: 'YM' });
-
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
-
-    // Mix the three chip channels into a single mono sample in [-1, +1].
-    // get_channel0/1/2() each return a value already scaled by the DAC table;
-    // average them so full-volume three-voice output doesn't clip.
-    function renderSample() {
-        var a = chip.get_channel0();
-        var b = chip.get_channel1();
-        var c = chip.get_channel2();
-        return (a + b + c) / 3.0;
+export class AYM_PlayerProcessor extends AudioWorkletProcessor {
+    constructor(options) {
+        super();
+        this.playlist    = new AYM_Playlist();
+        this.chip        = new AYM_Emulator({});
+        this.chip_flags  = 0;
+        this.chip_ticks  = 0;
+        this.chip_clock  = 0;
+        this.music       = null;
+        this.music_index = -1;
+        this.music_count = 0;
+        this.music_ticks = 0;
+        this.music_clock = 0;
+        this.channel_a   = null;
+        this.channel_b   = null;
+        this.channel_c   = null;
+        this.port.onmessage = (message) => {
+            this.recvMessage(message);
+        };
+        this.setChipMasterClock(1000000);
     }
 
-    // Advance the chip by the correct number of master-clock ticks for one
-    // output sample, then capture the resulting sample value.
-    // Uses an integer accumulator so fractional clocks never accumulate error.
-    function generateSample() {
-        chip_ticks += MASTER_CLOCK;
-        while (chip_ticks >= sampleRate) {
-            chip_ticks -= sampleRate;
-            chip.clock();
-        }
-        return renderSample();
+    sendMessage(type = null, data = null) {
+        this.port.postMessage({ message_type: type, message_data: data });
     }
 
-    // Produce `size` samples and push them onto audioBuffer, tracking how many
-    // bytes have been emitted in the current frame.
-    function handleAySound(size) {
-        if (audioBuffer === null) return;
-        size = ~~size;
-        while (size-- > 0) {
-            audioBuffer.push(generateSample());
-            soundDataFrameBytes++;
-        }
-    }
+    recvMessage(message) {
+        const payload = message.data;
 
-    // -------------------------------------------------------------------------
-    // Web Audio / mozAudio output
-    // -------------------------------------------------------------------------
-
-    function processAudio(e) {
-        fillBuffer(e.outputBuffer.getChannelData(0));
-    }
-
-    function fillBuffer(outputArray) {
-        try {
-            bug.say("audio fillBuffer");
-            var n = outputArray.length;
-            if (!soundEnabled) {
-                for (var i = 0; i < n; i++) outputArray[i] = 0;
-                audioBuffer.splice(0, audioBuffer.length);
-                return;
-            }
-            resampleBuffer(n);
-            for (var i = 0; i < n; i++) {
-                outputArray[i] = audioBuffer[i] || 0;
-            }
-            audioBuffer.splice(0, n);
-        } catch (e) {
-            bug.say("audio fillBuffer error " + e.message);
+        switch(payload.message_type) {
+            case 'State':
+                this.recvState();
+                break;
+            case 'Reset':
+                this.recvReset();
+                break;
+            case 'Pause':
+                this.recvPause();
+                break;
+            case 'MuteA':
+                this.recvMuteA();
+                break;
+            case 'MuteB':
+                this.recvMuteB();
+                break;
+            case 'MuteC':
+                this.recvMuteC();
+                break;
+            case 'Play':
+                this.recvPlay();
+                break;
+            case 'Stop':
+                this.recvStop();
+                break;
+            case 'Prev':
+                this.recvPrev();
+                break;
+            case 'Next':
+                this.recvNext();
+                break;
+            case 'Seek':
+                this.recvSeek(payload.message_data);
+                break;
+            default:
+                break;
         }
     }
 
-    function resampleBuffer(count) {
-        var src = audioBuffer;
-        var len = src.length;
-        var newBuffer = new Array(count);
-        for (var i = 0; i < count; i++) {
-            newBuffer[i] = src[~~(i / count * len)] || 0;
+    recvState() {
+        if((this.chip_flags & AYM_FLAG_PAUSE) != 0) {
+            this.sendPaused();
         }
-        audioBuffer = newBuffer;
-    }
-
-    function writeSampleData(soundIsEnabled) {
-        soundEnabled = soundIsEnabled;
-        if (audioBuffer === null) return;
-
-        if (!soundEnabled) {
-            audioBuffer.length = 0;
-            lastWritten = new Date();
-            return;
+        else {
+            this.sendResumed();
         }
-
-        if (audioOutput !== null) {
-            var currTime = new Date();
-            var samplesNeeded = ~~(sampleRate / (1000 / (currTime - lastWritten)));
-            if (audioBuffer.length < samplesNeeded) resampleBuffer(samplesNeeded);
-            lastWritten = currTime;
-            audioOutput.mozWriteAudio(audioBuffer);
-            audioBuffer.length = 0;
+        if((this.chip_flags & AYM_FLAG_MUTEA) != 0) {
+            this.sendMutedA();
+        }
+        else {
+            this.sendUnmutedA();
+        }
+        if((this.chip_flags & AYM_FLAG_MUTEB) != 0) {
+            this.sendMutedB();
+        }
+        else {
+            this.sendUnmutedB();
+        }
+        if((this.chip_flags & AYM_FLAG_MUTEC) != 0) {
+            this.sendMutedC();
+        }
+        else {
+            this.sendUnmutedC();
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Public interface — identical signatures to the original EstyJs.Sound
-    // -------------------------------------------------------------------------
+    recvReset() {
+        this.chip_flags |= AYM_FLAG_RESET;
+    }
 
-    self.startFrame = function () {
-        rowCount            = 0;
-        soundDataFrameBytes = 0;
-        frameCount++;
-    };
-
-    self.endFrame = function (enabled) {
-        // Fill any remaining samples for this frame
-        handleAySound(sampleRate / 50 - soundDataFrameBytes);
-        soundDataFrameBytes = 0;
-        if (frameCount++ < 2) return;
-        writeSampleData(enabled);
-    };
-
-    self.processRow = function () {
-        rowCount++;
-        handleAySound(Math.round(rowCount * sampleRate / 50 / 313) - soundDataFrameBytes);
-    };
-
-    self.reset = function () {
-        chip_ticks = 0;
-        chip = new AYM_Emulator({ type: 'YM' });
-        chip.set_master_clock(MASTER_CLOCK);
-    };
-
-    self.selectRegister = function (reg) {
-        regSelect = reg;
-        chip.set_register_index(reg);
-    };
-
-    self.readRegister = function () {
-        // Ensure the correct register is selected before reading
-        chip.set_register_index(regSelect);
-        return chip.get_register_value();
-    };
-
-    self.writeRegister = function (val) {
-        // Cycle-accurate: emit samples up to the current CPU position within
-        // this scanline before applying the register write, exactly as before.
-        var cycle      = processor.getRowCycleCount();
-        var sound_size = Math.round((rowCount * 512 + cycle) * sampleRate / 50 / 313 / 512)
-                         - soundDataFrameBytes;
-        handleAySound(sound_size);
-
-        // IO Port A (register 14) controls floppy drive selection on the ST
-        if (regSelect === 14) {
-            fdc.selectDrive((~val) & 7);
+    recvPause() {
+        if((this.chip_flags & AYM_FLAG_PAUSE) == 0) {
+            this.chip_flags |= AYM_FLAG_PAUSE;
+            this.sendPaused();
         }
+        else {
+            this.chip_flags &= ~AYM_FLAG_PAUSE;
+            this.sendResumed();
+        }
+    }
 
-        chip.set_register_index(regSelect);
-        chip.set_register_value(val);
-    };
+    recvMuteA() {
+        if((this.chip_flags & AYM_FLAG_MUTEA) == 0) {
+            this.chip_flags |= AYM_FLAG_MUTEA;
+            this.sendMutedA();
+        }
+        else {
+            this.chip_flags &= ~AYM_FLAG_MUTEA;
+            this.sendUnmutedA();
+        }
+    }
 
-    self.setProcessor = function (p) {
-        processor = p;
-    };
+    recvMuteB() {
+        if((this.chip_flags & AYM_FLAG_MUTEB) == 0) {
+            this.chip_flags |= AYM_FLAG_MUTEB;
+            this.sendMutedB();
+        }
+        else {
+            this.chip_flags &= ~AYM_FLAG_MUTEB;
+            this.sendUnmutedB();
+        }
+    }
 
-    self.init = function () {
-        chip.set_master_clock(MASTER_CLOCK);
+    recvMuteC() {
+        if((this.chip_flags & AYM_FLAG_MUTEC) == 0) {
+            this.chip_flags |= AYM_FLAG_MUTEC;
+            this.sendMutedC();
+        }
+        else {
+            this.chip_flags &= ~AYM_FLAG_MUTEC;
+            this.sendUnmutedC();
+        }
+    }
 
-        var AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-            audioBuffer  = [];
-            audioContext = new AudioContext();
+    recvPlay() {
+        this.chip_flags |= AYM_FLAG_RESET;
+        this.music = this.playlist.getMusic();
+        this.music_index = 0;
+        this.music_count = this.music.length;
+        this.music_ticks = 0;
+        this.music_clock = this.music.framerate;
+        this.setChipMasterClock(this.music.frequency);
+        this.sendPlaying();
+    }
 
-            if (audioContext.createJavaScriptNode != null) {
-                audioNode = audioContext.createJavaScriptNode(16384, 1, 1);
-            } else if (audioContext.createScriptProcessor != null) {
-                audioNode = audioContext.createScriptProcessor(16384, 1, 1);
-            } else {
-                audioNode = null;
-            }
+    recvStop() {
+        this.chip_flags |= AYM_FLAG_RESET;
+        this.music_index = -1;
+        this.music_count = 0;
+        this.music_ticks = 0;
+        this.music_clock = 0;
+        this.setChipMasterClock(this.music.frequency);
+        this.sendStopped();
+    }
 
-            if (audioNode !== null) {
-                audioNode.onaudioprocess = processAudio;
-                audioNode.connect(audioContext.destination);
-            }
-        } else if (typeof Audio !== 'undefined') {
-            audioOutput = new Audio();
-            if (typeof audioOutput.mozSetup !== 'undefined') {
-                audioBuffer = [];
-                audioOutput.mozSetup(1, sampleRate);
-            } else {
-                audioOutput = null;
+    recvPrev() {
+        const music = this.playlist.prevMusic();
+        if(music != null) {
+            this.music = music;
+            this.music_index = (this.music_index >= 0 ? 0 : this.music_index);
+            this.music_count = this.music.length;
+            this.music_ticks = 0;
+            this.music_clock = this.music.framerate;
+            this.setChipMasterClock(this.music.frequency);
+            this.sendChanged();
+            this.sendTitle();
+            if(this.music_index >= 0) {
+                this.sendPlaying();
             }
         }
-    };
+        else {
+            this.sendUnchanged();
+        }
+    }
 
-    return self;
-};
+    recvNext() {
+        const music = this.playlist.nextMusic();
+        if(music != null) {
+            this.music = music;
+            this.music_index = (this.music_index >= 0 ? 0 : this.music_index);
+            this.music_count = this.music.length;
+            this.music_ticks = 0;
+            this.music_clock = this.music.framerate;
+            this.setChipMasterClock(this.music.frequency);
+            this.sendChanged();
+            this.sendTitle();
+            if(this.music_index >= 0) {
+                this.sendPlaying();
+            }
+        }
+        else {
+            this.sendUnchanged();
+        }
+    }
+
+    recvSeek(seek) {
+        const music_index = this.music_index;
+        const music_count = this.music_count;
+        if((music_index > 0) && (music_count > 0)) {
+            this.music_index = (((music_count * seek) | 0) % music_count);
+        }
+    }
+
+    sendTitle() {
+        this.sendMessage('Title', this.music.title);
+    }
+
+    sendPlaying() {
+        this.sendMessage('Playing');
+        this.sendTitle();
+    }
+
+    sendStopped() {
+        this.sendMessage('Stopped');
+        this.sendSeek(0);
+    }
+
+    sendChanged() {
+        this.sendMessage('Changed');
+    }
+
+    sendUnchanged() {
+        this.sendMessage('Unchanged');
+    }
+
+    sendSeek(seek) {
+        this.sendMessage('Seek', seek);
+    }
+
+    sendPaused() {
+        this.sendMessage('Paused');
+    }
+
+    sendResumed() {
+        this.sendMessage('Resumed');
+    }
+
+    sendMutedA() {
+        this.sendMessage('MutedA');
+    }
+
+    sendUnmutedA() {
+        this.sendMessage('UnmutedA');
+    }
+
+    sendMutedB() {
+        this.sendMessage('MutedB');
+    }
+
+    sendUnmutedB() {
+        this.sendMessage('UnmutedB');
+    }
+
+    sendMutedC() {
+        this.sendMessage('MutedC');
+    }
+
+    sendUnmutedC() {
+        this.sendMessage('UnmutedC');
+    }
+
+    setChipMasterClock(master_clock) {
+        this.chip_clock = this.chip.set_master_clock(master_clock);
+        this.chip.reset();
+    }
+
+    hasReset() {
+        if((this.chip_flags & AYM_FLAG_RESET) != 0) {
+            this.chip_flags &= ~AYM_FLAG_RESET;
+            this.chip_ticks &= 0;
+            this.chip.reset();
+            return true;
+        }
+        return false;
+    }
+
+    hasPause() {
+        if((this.chip_flags & AYM_FLAG_PAUSE) != 0) {
+            return true;
+        }
+        return false;
+    }
+
+    process(inputs, outputs, parameters) {
+        if(this.hasReset() || this.hasPause()) {
+            return true;
+        }
+
+        const numSamples = () => {
+            if(outputs.length > 0) {
+                const output0 = outputs[0];
+                if(output0.length > 0) {
+                    const channel0 = output0[0];
+                    if(channel0.length > 0) {
+                        return channel0.length;
+                    }
+                }
+            }
+            return 128;
+        };
+
+        const getChannelA = (samples) => {
+            if((this.channel_a == null) || (this.channel_a.length < samples)) {
+                this.channel_a = new Float32Array(samples);
+            }
+            return this.channel_a;
+        };
+
+        const getChannelB = (samples) => {
+            if((this.channel_b == null) || (this.channel_b.length < samples)) {
+                this.channel_b = new Float32Array(samples);
+            }
+            return this.channel_b;
+        };
+
+        const getChannelC = (samples) => {
+            if((this.channel_c == null) || (this.channel_c.length < samples)) {
+                this.channel_c = new Float32Array(samples);
+            }
+            return this.channel_c;
+        };
+
+        const samples   = numSamples();
+        const channel_a = getChannelA(samples);
+        const channel_b = getChannelB(samples);
+        const channel_c = getChannelC(samples);
+
+        const mixMono = (channel) => {
+            for(let sample = 0; sample < samples; ++sample) {
+                let output = 0;
+                if((this.chip_flags & AYM_FLAG_MUTEA) == 0) {
+                    output += channel_a[sample];
+                }
+                if((this.chip_flags & AYM_FLAG_MUTEB) == 0) {
+                    output += channel_b[sample];
+                }
+                if((this.chip_flags & AYM_FLAG_MUTEC) == 0) {
+                    output += channel_c[sample];
+                }
+                channel[sample] = (output / 3.0);
+            }
+        };
+
+        const mixStereo = (channel1, channel2) => {
+            for(let sample = 0; sample < samples; ++sample) {
+                let output1 = 0;
+                let output2 = 0;
+                if((this.chip_flags & AYM_FLAG_MUTEA) == 0) {
+                    output1 += (channel_a[sample] * 0.75);
+                    output2 += (channel_a[sample] * 0.25);
+                }
+                if((this.chip_flags & AYM_FLAG_MUTEB) == 0) {
+                    output1 += (channel_b[sample] * 0.50);
+                    output2 += (channel_b[sample] * 0.50);
+                }
+                if((this.chip_flags & AYM_FLAG_MUTEC) == 0) {
+                    output1 += (channel_c[sample] * 0.25);
+                    output2 += (channel_c[sample] * 0.75);
+                }
+                channel1[sample] = (output1 / 1.5);
+                channel2[sample] = (output2 / 1.5);
+            }
+        };
+
+        const clockMusic = () => {
+            if((this.music != null) && (this.music_index >= 0)) {
+                this.music_ticks += this.music_clock;
+                if(this.music_ticks >= this.chip_clock) {
+                    this.music_ticks -= this.chip_clock;
+                    const frame = this.music.frames[this.music_index];
+                    for(let index = 0; index < 14; ++index) {
+                        const value = frame[index];
+                        if((index == 13) && (value == 0xff)) {
+                            continue;
+                        }
+                        this.chip.set_register_index(index);
+                        this.chip.set_register_value(value);
+                    }
+                    if((this.music_index % this.music_clock) == 0) {
+                        this.sendSeek((+this.music_index / +this.music_count));
+                    }
+                    this.music_index = ((this.music_index + 1) | 0);
+                    if(this.music_index >= this.music_count) {
+                        this.recvNext();
+                        if(this.music_index >= this.music_count) {
+                            this.recvStop();
+                        }
+                    }
+                }
+            }
+        };
+
+        const clockChip = () => {
+            for(let sample = 0; sample < samples; ++sample) {
+                channel_a[sample] = this.chip.get_channel0();
+                channel_b[sample] = this.chip.get_channel1();
+                channel_c[sample] = this.chip.get_channel2();
+                while(this.chip_ticks < this.chip_clock) {
+                    this.chip_ticks += sampleRate;
+                    this.chip.clock();
+                    clockMusic();
+                }
+                this.chip_ticks -= this.chip_clock;
+            }
+            for(const output of outputs) {
+                if(output.length >= 2) {
+                    mixStereo(output[0], output[1]);
+                    continue;
+                }
+                if(output.length >= 1) {
+                    mixMono(output[0]);
+                    continue;
+                }
+            }
+            return true;
+        };
+
+        return clockChip();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// register AYM_PlayerProcessor
+// ---------------------------------------------------------------------------
+
+registerProcessor("aym-player-processor", AYM_PlayerProcessor);
+
+// ---------------------------------------------------------------------------
+// End-Of-File
+// ---------------------------------------------------------------------------
