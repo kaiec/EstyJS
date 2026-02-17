@@ -24,11 +24,6 @@ Current maintainer (since 2024): Kai Eckert
 
 import { AYM_Emulator } from './aym-js/aym-emulator.js';
 
-// NOTE: This file must be loaded as an ES module:
-//   <script type="module" src="sound.js"></script>
-// A plain <script src="sound.js"> will throw a SyntaxError on the import
-// statement above and EstyJs.Sound will never be defined.
-
 EstyJs.Sound = function (opts) {
     var self = {};
 
@@ -36,22 +31,20 @@ EstyJs.Sound = function (opts) {
     var fdc = opts.fdc;
 
     // The Atari ST clocks the YM2149 at 2 MHz.
-    // AYM_Emulator.clock() accepts one master-clock tick and divides
-    // internally by 8, so we drive it at the full 2 MHz master rate.
-    var MASTER_CLOCK = 512 * 313 * 50 / 2; // ~2,003,200 Hz, matches original
+    // chip.clock() divides internally by 8, giving an effective chip rate of 250 kHz.
+    var MASTER_CLOCK = 2000000;
 
     // 44100 Hz output, locked to 50 Hz frame rate
-    var samplesPerFrame = 882;                    // 44100 / 50
-    var sampleRate      = samplesPerFrame * 50;   // 44100
+    var samplesPerFrame = 882;               // 44100 / 50
+    var sampleRate      = samplesPerFrame * 50;  // 44100
 
     var audioContext = null;
     var audioNode    = null;
     var audioOutput  = null;  // legacy mozAudio fallback
-    var audioBuffer  = null;
+    var audioBuffer  = null;  // ring of Float32 samples waiting to be consumed
 
     var soundEnabled = true;
 
-    // Currently latched PSG register number (set by selectRegister)
     var regSelect = 0;
 
     var soundDataFrameBytes = 0;
@@ -62,20 +55,15 @@ EstyJs.Sound = function (opts) {
 
     var lastWritten = new Date();
 
-    // Sub-sample clocking accumulator — avoids floating-point drift.
-    // We need MASTER_CLOCK / sampleRate chip.clock() calls per output sample.
+    // Integer Bresenham-style clock accumulator — avoids floating-point drift.
     var chip_ticks = 0;
 
-    // YM2149 emulator in YM DAC mode (correct for Atari ST)
     var chip = new AYM_Emulator({ type: 'YM' });
 
     // -------------------------------------------------------------------------
-    // Internal helpers
+    // Chip clocking / sample generation
     // -------------------------------------------------------------------------
 
-    // Mix the three chip channels into a mono sample in [-1, +1].
-    // Each channel is already scaled by the DAC table; dividing by 3
-    // prevents clipping when all three are at full volume simultaneously.
     function renderSample() {
         var a = chip.get_channel0();
         var b = chip.get_channel1();
@@ -83,8 +71,6 @@ EstyJs.Sound = function (opts) {
         return (a + b + c) / 3.0;
     }
 
-    // Advance the chip by the correct number of master-clock ticks for one
-    // output sample period, then snapshot the resulting output.
     function generateSample() {
         chip_ticks += MASTER_CLOCK;
         while (chip_ticks >= sampleRate) {
@@ -94,10 +80,10 @@ EstyJs.Sound = function (opts) {
         return renderSample();
     }
 
-    // Generate `size` samples and append to audioBuffer.
     function handleAySound(size) {
         if (audioBuffer === null) return;
         size = ~~size;
+        if (size <= 0) return;
         while (size-- > 0) {
             audioBuffer.push(generateSample());
             soundDataFrameBytes++;
@@ -105,35 +91,42 @@ EstyJs.Sound = function (opts) {
     }
 
     // -------------------------------------------------------------------------
-    // Web Audio / mozAudio output path
+    // Web Audio output
+    //
+    // The ScriptProcessor callback asks for exactly `n` samples at a time
+    // (n = the buffer size set in createScriptProcessor, here 4096).
+    // We simply drain that many samples from the front of audioBuffer,
+    // padding with silence if we're momentarily behind.  We never resample —
+    // that was the root cause of the dropout pattern observed in the broken
+    // recording (resampleBuffer was stretching a partial frame to fill 16 384
+    // samples and then discarding everything, creating 60-scanline-long
+    // silence/audio alternations at ~260 Hz).
     // -------------------------------------------------------------------------
 
     function processAudio(e) {
-        fillBuffer(e.outputBuffer.getChannelData(0));
-    }
+        var outputArray = e.outputBuffer.getChannelData(0);
+        var n = outputArray.length;
+        bug.say("audio fillBuffer");
 
-    function fillBuffer(outputArray) {
-        try {
-            bug.say("audio fillBuffer");
-            var n = outputArray.length;
-            if (!soundEnabled) {
-                for (var i = 0; i < n; i++) outputArray[i] = 0;
-                audioBuffer.length = 0;
-                return;
-            }
-            resampleBuffer(n);
-            for (var i = 0; i < n; i++) {
-                outputArray[i] = audioBuffer[i] || 0;
-            }
-            audioBuffer.splice(0, n);
-        } catch (e) {
-            bug.say("audio fillBuffer error " + e.message);
+        if (!soundEnabled) {
+            for (var i = 0; i < n; i++) outputArray[i] = 0;
+            return;
+        }
+
+        for (var i = 0; i < n; i++) {
+            // If we have buffered samples, consume them; otherwise output silence.
+            outputArray[i] = (audioBuffer.length > 0) ? audioBuffer.shift() : 0;
         }
     }
+
+    // -------------------------------------------------------------------------
+    // mozAudio legacy output (unchanged — only used on old Firefox)
+    // -------------------------------------------------------------------------
 
     function resampleBuffer(count) {
         var src = audioBuffer;
         var len = src.length;
+        if (len === 0) return;
         var newBuffer = new Array(count);
         for (var i = 0; i < count; i++) {
             newBuffer[i] = src[~~(i / count * len)] || 0;
@@ -162,38 +155,42 @@ EstyJs.Sound = function (opts) {
     }
 
     // -------------------------------------------------------------------------
-    // Public interface — identical signatures to original EstyJs.Sound
+    // Public interface
     // -------------------------------------------------------------------------
 
     self.startFrame = function () {
         rowCount            = 0;
         soundDataFrameBytes = 0;
-        frameCount++;
+        // NOTE: frameCount is incremented only in endFrame.
     };
 
     self.endFrame = function (enabled) {
-        handleAySound(sampleRate / 50 - soundDataFrameBytes);
+        // Fill any remaining samples to complete this 50 Hz frame.
+        handleAySound(samplesPerFrame - soundDataFrameBytes);
         soundDataFrameBytes = 0;
-        if (frameCount++ < 2) return;
+        frameCount++;
+        if (frameCount < 2) return;
         writeSampleData(enabled);
     };
 
     self.processRow = function () {
         rowCount++;
-        handleAySound(Math.round(rowCount * sampleRate / 50 / 313) - soundDataFrameBytes);
+        var target = Math.round(rowCount * samplesPerFrame / 313);
+        handleAySound(target - soundDataFrameBytes);
     };
 
     self.reset = function () {
-        chip_ticks = 0;
+        chip_ticks          = 0;
+        soundDataFrameBytes = 0;
+        frameCount          = 0;
+        rowCount            = 0;
         chip = new AYM_Emulator({ type: 'YM' });
         chip.set_master_clock(MASTER_CLOCK);
     };
 
     self.selectRegister = function (reg) {
-        regSelect = reg;
-        // Pre-select in chip so readRegister() can be called without
-        // needing to set the index again.
-        chip.set_register_index(reg);
+        regSelect = reg & 0x0f;
+        chip.set_register_index(regSelect);
     };
 
     self.readRegister = function () {
@@ -202,15 +199,10 @@ EstyJs.Sound = function (opts) {
     };
 
     self.writeRegister = function (val) {
-        // Cycle-accurate: generate samples up to the current CPU cycle
-        // position within the scanline before committing the register write.
-        var cycle      = processor.getRowCycleCount();
-        var sound_size = Math.round(
-            (rowCount * 512 + cycle) * sampleRate / 50 / 313 / 512
-        ) - soundDataFrameBytes;
-        handleAySound(sound_size);
+        var cycle  = processor.getRowCycleCount();
+        var target = Math.round((rowCount + cycle / 512) * samplesPerFrame / 313);
+        handleAySound(target - soundDataFrameBytes);
 
-        // IO Port A (register 14) drives the floppy drive-select lines.
         if (regSelect === 14) {
             fdc.selectDrive((~val) & 7);
         }
@@ -231,10 +223,16 @@ EstyJs.Sound = function (opts) {
             audioBuffer  = [];
             audioContext = new AudioContext();
 
+            // Use a smaller buffer (4096) so latency stays reasonable.
+            // The original 16384 meant the callback fired every ~371 ms —
+            // far too infrequently relative to the 20 ms frame budget, which
+            // exacerbated the buffer-starvation problem.
+            var bufSize = 4096;
+
             if (audioContext.createJavaScriptNode != null) {
-                audioNode = audioContext.createJavaScriptNode(16384, 1, 1);
+                audioNode = audioContext.createJavaScriptNode(bufSize, 1, 1);
             } else if (audioContext.createScriptProcessor != null) {
-                audioNode = audioContext.createScriptProcessor(16384, 1, 1);
+                audioNode = audioContext.createScriptProcessor(bufSize, 1, 1);
             } else {
                 audioNode = null;
             }
