@@ -21,8 +21,6 @@ Current maintainer (since 2024): Kai Eckert
 */
 
 
-// io registers emulation routines for EstyJs
-// written by Darren Coles
 "use strict";
 
 EstyJs.bug = function() {
