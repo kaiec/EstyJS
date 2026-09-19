@@ -43,6 +43,9 @@ node tools/record-psg.js xmas1987.st /tmp/xmas.json --run 233,95 --frames 1500
 ```
 
 `--key 32,32` presses keys after booting, for title screens that wait for one.
+Joystick 1 is the cursor keys (37/38/39/40) and control (17), so `--key 17`
+presses fire. For anything more involved - walking into a level and shooting -
+drive `esty-headless.js` directly with `keyDown`/`keyUp`.
 
 Screenshots come out as raw 640x512 RGBA, which `ffmpeg` will convert as above.
 
@@ -64,7 +67,9 @@ node tools/browser-capture.js <disk.st> <out.wav> [options]
 
 Serves the working copy, drives headless Chromium, boots the disk, switches
 sound on, taps the audio graph and writes out what was actually played. Takes
-the same `--run` and `--key` options. Also prints the worklet's own view of
+the same `--run` and `--key` options, plus `--mash 17,250` to keep pressing a
+key while recording (sound effects usually need one held) and `--shot out.png`
+to see where the machine actually got to. Also prints the worklet's own view of
 itself: how many frames of sound are buffered ahead of playback, and the speed
 correction being applied to hold it there. In good health that is a lead of
 three to five frames and a speed within a percent or two of 1, barely moving.
@@ -103,6 +108,15 @@ node tools/check-audio.mjs /tmp/reference.wav /tmp/played.wav
 
 Run against the commit before the sound rework, `/tmp/played.wav` contains 306
 dropouts in 20 seconds, 305 of them exactly 128 samples long. After it, none.
+
+## A trap worth knowing
+
+Sound effects and music can fail independently. Rick Dangerous plays its music
+with the tone generators and its gun and explosions by switching a channel's
+tone and noise off and driving the volume register as a DAC. A capture of the
+title screen therefore says nothing at all about whether effects work - it has
+to be a capture of actual play. Getting that wrong once cost a whole round of
+"I checked, that case never happens".
 
 ## esty-headless.js
 
