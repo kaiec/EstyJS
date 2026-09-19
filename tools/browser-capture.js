@@ -20,6 +20,7 @@
  *   --key K[,K...]  key codes to press after booting, 7s apart (32 = space)
  *   --run X,Y       launch a program from the desktop, as in record-psg.js
  *   --port N        port for the local server (default 8123)
+ *   --status        print the worklet's per-second report rather than a summary
  *
  * Needs `chromium` on PATH. Nothing is installed and no data leaves the machine.
  */
@@ -40,13 +41,14 @@ if (!disk || !outWav) {
     process.exit(1);
 }
 
-const opts = { seconds: 20, boot: 9, keys: [], run: null, port: 8123 };
+const opts = { seconds: 20, boot: 9, keys: [], run: null, port: 8123, status: false };
 for (let i = 0; i < rest.length; i++) {
     switch (rest[i]) {
         case '--seconds': opts.seconds = parseFloat(rest[++i]); break;
         case '--boot':    opts.boot    = parseFloat(rest[++i]); break;
         case '--port':    opts.port    = parseInt(rest[++i], 10); break;
         case '--key':     opts.keys    = rest[++i].split(',').map(Number); break;
+        case '--status':  opts.status  = true; break;
         case '--run':     opts.run     = rest[++i].split(',').map(Number); break;
         default: console.error('unknown option ' + rest[i]); process.exit(1);
     }
@@ -260,6 +262,12 @@ run().then(result => {
         const lead = settled.map(s => s.lead), rate_ = settled.map(s => s.rate);
         const spread = a => `${mean(a).toFixed(3)} (${Math.min(...a).toFixed(3)}..${Math.max(...a).toFixed(3)})`;
         console.log(`worklet: lead ${spread(lead)} frames, speed ${spread(rate_)}`);
+    }
+    if (opts.status) {
+        (result.status || []).forEach((s, i) => {
+            if (s) console.log(`  ${String(i).padStart(3)}s  lead ${s.lead.toFixed(2).padStart(6)}` +
+                               `  speed ${s.rate.toFixed(4)}${s.starved ? '  (nothing to play)' : ''}`);
+        });
     }
     const starved = (result.status || []).filter(s => s && s.starved).length;
     if (starved > 2) console.log(`worklet ran dry in ${starved} of the status reports`);

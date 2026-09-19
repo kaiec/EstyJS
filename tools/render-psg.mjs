@@ -40,8 +40,9 @@ if (!writes.length) {
     process.exit(1);
 }
 
-// Same clocks the worklet uses: 8 MHz CPU, YM2149 at a quarter of it.
-const CPU_CLOCK = 8000000;
+// Same clocks the worklet uses: the PAL ST's 8.021247 MHz CPU, YM2149 at a
+// quarter of it.
+const CPU_CLOCK = 8021247;
 const CHIP_CLOCK = CPU_CLOCK / 4;
 
 const chip = new AYM_Emulator({ type: 'YM' });

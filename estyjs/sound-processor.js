@@ -41,8 +41,11 @@ Current maintainer (since 2024): Kai Eckert
 
 import { AYM_Emulator } from './aym-js/aym-emulator.js';
 
-// Atari ST: 8 MHz CPU, and the YM2149 is fed a quarter of that.
-const CPU_CLOCK = 8000000;
+// Atari ST (PAL): the CPU runs at 8.021247 MHz and the YM2149 is fed a quarter
+// of that. These have to be the real figures rather than round ones - the speed
+// correction below would otherwise spend its whole range making up the
+// difference instead of tracking the emulator.
+const CPU_CLOCK = 8021247;
 const CHIP_CLOCK = CPU_CLOCK / 4;
 
 // How much unplayed timeline to keep in hand, in frames. This is the latency
@@ -51,14 +54,14 @@ const CHIP_CLOCK = CPU_CLOCK / 4;
 const TARGET_LEAD_FRAMES = 3;
 
 // How hard to correct a lead error, and the most we will ever bend playback
-// speed. The emulator typically runs about 1% off nominal, so the limit has to
-// be comfortably above that or the lead would run away.
+// speed. With the clocks above matching what estyjs.js actually delivers, the
+// correction settles within a fraction of a percent of 1 and the limit is only
+// there for when something goes badly wrong.
 //
 // The gain is deliberately weak. A frame or two of delivery jitter is normal -
 // it happens every time the main thread does something slow - and the cushion
 // above exists precisely to absorb it. Reacting hard to that jitter would turn
-// it into pitch movement, which is the one artefact worth avoiding here; a
-// standing offset of a percent is not.
+// it into pitch movement, which is the one artefact worth avoiding here.
 const RATE_GAIN = 0.008;
 const RATE_LIMIT = 0.05;
 

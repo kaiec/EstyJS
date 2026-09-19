@@ -33,7 +33,21 @@ function EstyJs(output) {
 	var frameCount = 0;
 	var lastFrame = window.performance.now();
 
+	// A PAL ST frame is 313 scanlines of 512 cycles, and the CPU runs at
+	// 8.021247 MHz, which works out at a shade under 20 ms.
+	var FRAME_MS = 1000 * 313 * 512 / 8021247;
+
+	// When the next frame is due. Frames are aimed at absolute times so that a
+	// late one does not push everything after it back: scheduling error cannot
+	// accumulate, and the average frame rate comes out right whatever each
+	// frame happens to cost.
 	var nextFrame = 0;
+
+	// How far behind we are willing to chase before giving up and starting
+	// afresh. Falling further behind than this means the machine cannot keep
+	// up, or the tab was in the background; running a burst of frames at full
+	// speed to catch up would be worse than dropping them.
+	var MAX_CATCHUP_FRAMES = 5;
 
 	var running = true;
 
@@ -130,21 +144,18 @@ function EstyJs(output) {
 	sound.setProcessor(processor);
 	memory.setProcessor(processor);
 
-	nextFrame = window.performance.now() + 20;
-	//setInterval(runframe, 20);
-	setTimeout(runframe, 20);
+	nextFrame = window.performance.now() + FRAME_MS;
+	setTimeout(runframe, FRAME_MS);
 
 	function runframe() {
+		var currTime = window.performance.now();
+
 		if (running & memory.loaded == 1) {
 			if (firstFrame) {
 				self.reset();
 				firstFrame = false;
 			}
 
-			var currTime = window.performance.now();
-
-			//var reqFrames = (currTime - startTime)/20;		
-			//while (frameCount< reqFrames)
 			{
 				display.startFrame();
 				sound.startFrame();
@@ -166,13 +177,16 @@ function EstyJs(output) {
 				frameCount++;
 			}
 		}
-		display.setFrameRate(2000 / (currTime - lastFrame));
+		// 100% means the machine is running at the speed a real ST would.
+		display.setFrameRate(100 * FRAME_MS / (currTime - lastFrame));
 
 		lastFrame = currTime;
 
-		//nextFrame = nextFrame+20;
-		setTimeout(runframe, Math.max(0, 20 - (~~(window.performance.now() - lastFrame + 1))));
-		//setTimeout(runframe,nextFrame-window.performance.now())
+		var now = window.performance.now();
+		nextFrame += FRAME_MS;
+		if (nextFrame < now - MAX_CATCHUP_FRAMES * FRAME_MS) nextFrame = now + FRAME_MS;
+
+		setTimeout(runframe, Math.max(0, nextFrame - now));
 	}
 
 	self.reset = function () {
