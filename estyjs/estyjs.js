@@ -197,6 +197,13 @@ function EstyJs(output) {
 		return soundEnabled;
 	}
 
+	// How far ahead of playback the sound is buffered, and the speed correction
+	// the audio thread is applying to keep it there. For diagnosing sound
+	// problems from the console.
+	self.getSoundStatus = function () {
+		return sound.getStatus();
+	}
+
 	self.changeTOS = function (file) {
 		memory.changeTOS(file);
 		this.reset()
