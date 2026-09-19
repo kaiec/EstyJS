@@ -125,8 +125,11 @@ function createMachine(estyDir, opts = {}) {
     vm.runInContext('EstyJs.Sound = __recorder;', sandbox);
 
     // ------------------------------------------------------------- driving ---
-    vm.runInContext('var esty = EstyJs("screen"); esty.setJoystick(false); esty.soundToggle();',
-                    sandbox);
+    vm.runInContext('var esty = EstyJs("screen"); esty.soundToggle();', sandbox);
+    machine.setJoystick = function (on) {
+        vm.runInContext('esty.setJoystick(' + (on ? 'true' : 'false') + ');', sandbox);
+        return machine;
+    };
 
     machine.writes = writes;
     machine.frameCount = () => frame;
@@ -191,11 +194,23 @@ function createMachine(estyDir, opts = {}) {
     machine.doubleClick = function () { return machine.click(2, 3, 3); };
 
     // --- keyboard ----------------------------------------------------------
+    // Joystick 1 is the cursor keys plus control: 37/38/39/40 and 17.
+    const keyEvent = (keyCode) => ({ keyCode, which: keyCode, metaKey: false,
+                                     stopPropagation() {}, preventDefault() {} });
+
+    machine.keyDown = function (keyCode) {
+        sandbox.document.onkeydown(keyEvent(keyCode));
+        return machine;
+    };
+
+    machine.keyUp = function (keyCode) {
+        sandbox.document.onkeyup(keyEvent(keyCode));
+        return machine;
+    };
+
     machine.key = function (keyCode, frames = 4) {
-        const e = { keyCode, which: keyCode, metaKey: false,
-                    stopPropagation() {}, preventDefault() {} };
-        sandbox.document.onkeydown(e); machine.run(frames);
-        sandbox.document.onkeyup(e);   machine.run(frames);
+        machine.keyDown(keyCode); machine.run(frames);
+        machine.keyUp(keyCode);   machine.run(frames);
         return machine;
     };
 

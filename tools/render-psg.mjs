@@ -18,13 +18,18 @@ import { fileURLToPath } from 'url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-// aym-emulator.js is an ES module, but it lives in a directory with no
-// package.json saying so, and Node decides that from the file extension. Import
-// it through a data: URL so the vendored copy can stay byte-identical upstream.
-const emulatorSource = fs.readFileSync(
-    path.join(here, '..', 'estyjs', 'aym-js', 'aym-emulator.js'), 'utf8');
-const { AYM_Emulator } = await import(
-    'data:text/javascript;base64,' + Buffer.from(emulatorSource).toString('base64'));
+// These are ES modules, but they live in directories with no package.json
+// saying so, and Node decides that from the file extension. Import them through
+// data: URLs so the vendored copy can stay byte-identical with upstream.
+// Neither file has relative imports of its own, which is what makes this work.
+async function importFile(...parts) {
+    const source = fs.readFileSync(path.join(here, '..', ...parts), 'utf8');
+    return import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+}
+
+const { AYM_Emulator } = await importFile('estyjs', 'aym-js', 'aym-emulator.js');
+const { createYM2149, createDcBlocker } = await importFile('estyjs', 'ym2149.js');
+const YM2149 = createYM2149(AYM_Emulator);
 
 const [logFile, outFile, rateArg] = process.argv.slice(2);
 if (!logFile || !outFile) {
@@ -45,13 +50,14 @@ if (!writes.length) {
 const CPU_CLOCK = 8021247;
 const CHIP_CLOCK = CPU_CLOCK / 4;
 
-const chip = new AYM_Emulator({ type: 'YM' });
+const chip = new YM2149({ type: 'YM' });
 chip.set_master_clock(CHIP_CLOCK);
 chip.reset();
 
 const totalSamples = Math.floor(writes[writes.length - 1].cycle / CPU_CLOCK * sampleRate);
 const pcm = Buffer.alloc(totalSamples * 2);
 
+const blockDc = createDcBlocker(sampleRate);
 let next = 0, ticks = 0;
 for (let s = 0; s < totalSamples; s++) {
     const cycle = (s + 1) * CPU_CLOCK / sampleRate;
@@ -61,7 +67,7 @@ for (let s = 0; s < totalSamples; s++) {
         next++;
     }
 
-    const v = (chip.get_channel0() + chip.get_channel1() + chip.get_channel2()) / 3;
+    const v = blockDc((chip.get_channel0() + chip.get_channel1() + chip.get_channel2()) / 3);
     pcm.writeInt16LE(Math.max(-1, Math.min(1, v)) * 32767 | 0, s * 2);
 
     ticks += CHIP_CLOCK;

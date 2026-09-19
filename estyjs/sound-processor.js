@@ -40,6 +40,9 @@ Current maintainer (since 2024): Kai Eckert
 // every callback - never happens.
 
 import { AYM_Emulator } from './aym-js/aym-emulator.js';
+import { createYM2149, createDcBlocker } from './ym2149.js';
+
+const YM2149 = createYM2149(AYM_Emulator);
 
 // Atari ST (PAL): the CPU runs at 8.021247 MHz and the YM2149 is fed a quarter
 // of that. These have to be the real figures rather than round ones - the speed
@@ -89,12 +92,14 @@ class EstySoundProcessor extends AudioWorkletProcessor {
         const opts = options.processorOptions || {};
         this.cyclesPerFrame = opts.cyclesPerFrame || (512 * 313);
 
-        this.chip = new AYM_Emulator({ type: 'YM' });
+        this.chip = new YM2149({ type: 'YM' });
         this.chip.set_master_clock(CHIP_CLOCK);
         this.chip.reset();
 
         // Fractional accumulator for clocking the chip from the sample rate.
         this.chipTicks = 0;
+
+        this.blockDc = createDcBlocker(sampleRate);
 
         // Frames handed over by sound.js but not played yet. Each holds the
         // flat (cycle, register, value) triples for one emulated frame.
@@ -214,8 +219,8 @@ class EstySoundProcessor extends AudioWorkletProcessor {
             // waits for a full cushion instead of chasing single frames.
             if (running) this.applyWritesUpTo(this.cycle);
 
-            const sample = (chip.get_channel0() + chip.get_channel1() +
-                            chip.get_channel2()) / 3;
+            const sample = this.blockDc((chip.get_channel0() + chip.get_channel1() +
+                                         chip.get_channel2()) / 3);
 
             if (this.gain < targetGain) this.gain = Math.min(targetGain, this.gain + gainStep);
             else if (this.gain > targetGain) this.gain = Math.max(targetGain, this.gain - gainStep);

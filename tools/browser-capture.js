@@ -21,6 +21,11 @@
  *   --run X,Y       launch a program from the desktop, as in record-psg.js
  *   --port N        port for the local server (default 8123)
  *   --status        print the worklet's per-second report rather than a summary
+ *   --shot FILE     save a PNG of the screen when the recording ends, so you
+ *                   can see what the machine was actually doing
+ *   --mash C,MS     hold key code C for MS milliseconds, repeatedly, while
+ *                   recording - for sound effects that need a button pressed
+ *                   (17 is the joystick fire button)
  *
  * Needs `chromium` on PATH. Nothing is installed and no data leaves the machine.
  */
@@ -41,7 +46,8 @@ if (!disk || !outWav) {
     process.exit(1);
 }
 
-const opts = { seconds: 20, boot: 9, keys: [], run: null, port: 8123, status: false };
+const opts = { seconds: 20, boot: 9, keys: [], run: null, port: 8123, status: false,
+               mash: null, shot: null };
 for (let i = 0; i < rest.length; i++) {
     switch (rest[i]) {
         case '--seconds': opts.seconds = parseFloat(rest[++i]); break;
@@ -49,6 +55,8 @@ for (let i = 0; i < rest.length; i++) {
         case '--port':    opts.port    = parseInt(rest[++i], 10); break;
         case '--key':     opts.keys    = rest[++i].split(',').map(Number); break;
         case '--status':  opts.status  = true; break;
+        case '--mash':    opts.mash    = rest[++i].split(',').map(Number); break;
+        case '--shot':    opts.shot    = rest[++i]; break;
         case '--run':     opts.run     = rest[++i].split(',').map(Number); break;
         default: console.error('unknown option ' + rest[i]); process.exit(1);
     }
@@ -140,11 +148,20 @@ function pageScript() {
     node.port.onmessage = e => chunks.push(e.data);
     window.__tap.connect(node);
 
+    ${opts.mash ? `
+    const mash = setInterval(() => {
+        const ev = { keyCode: ${opts.mash[0]}, which: ${opts.mash[0]},
+                     preventDefault(){}, stopPropagation(){} };
+        document.onkeydown(ev);
+        setTimeout(() => document.onkeyup(ev), ${opts.mash[1]});
+    }, ${opts.mash[1] * 2});` : ''}
+
     const status = [];
     for (let i = 0; i < ${Math.ceil(opts.seconds)}; i++) {
         status.push(estyjs.getSoundStatus ? estyjs.getSoundStatus() : null);
         await sleep(1000);
     }
+    ${opts.mash ? 'clearInterval(mash);' : ''}
     node.port.onmessage = null;
 
     let total = 0;
@@ -158,7 +175,8 @@ function pageScript() {
     for (let i = 0; i < bytes.length; i += 0x8000) {
         binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
     }
-    return { sampleRate: ctx.sampleRate, status, pcm: btoa(binary) };
+    const shot = ${opts.shot ? 'canvas.toDataURL("image/png").slice(22)' : 'null'};
+    return { sampleRate: ctx.sampleRate, status, shot, pcm: btoa(binary) };
 })()`;
 }
 
@@ -252,6 +270,11 @@ run().then(result => {
     fs.writeFileSync(outWav, wav);
 
     console.log(`\n${outWav}: ${(pcm.length / 2 / rate).toFixed(2)}s mono @${rate}Hz`);
+
+    if (opts.shot && result.shot) {
+        fs.writeFileSync(opts.shot, Buffer.from(result.shot, 'base64'));
+        console.log(`${opts.shot}: screen at the end of the recording`);
+    }
 
     // Ignore the reports from before playback starts, which read zero by
     // definition, and anything a build without getSoundStatus() returned.
