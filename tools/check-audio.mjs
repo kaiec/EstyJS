@@ -88,8 +88,12 @@ for (const file of process.argv.slice(2)) {
                 `(${(silent / mono.length * 100).toFixed(1)}% of the file)`);
     console.log(`  gap length: shortest ${lengths[0]}, median ` +
                 `${lengths[lengths.length >> 1]}, longest ${lengths[lengths.length - 1]} samples`);
+    // One or two quantum-sized gaps prove nothing - a quiet moment in the music
+    // can be any length. Underruns come in numbers.
+    const underruns = gaps.length >= 5 && quantum >= gaps.length * 0.8 &&
+                      lengths[lengths.length >> 1] <= 512;
     console.log(`  ${quantum}/${gaps.length} are an exact multiple of 128 samples` +
-                (quantum == gaps.length ? '  <- looks like underruns' : ''));
+                (underruns ? '  <- looks like underruns' : ''));
     console.log(`  first few at: ${gaps.slice(0, 6)
         .map(g => (g.start / sampleRate).toFixed(2) + 's').join(', ')}`);
 }

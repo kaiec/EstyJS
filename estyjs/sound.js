@@ -55,8 +55,10 @@ EstyJs.Sound = function (opts) {
 
     // Writes are handed over as flat triples of (cycle within frame, register,
     // value) so that a frame costs one small array instead of a bag of objects.
+    // A frame is usually a few dozen; players that drive the volume registers
+    // to play samples manage a few hundred.
     var WRITE_FIELDS = 3;
-    var MAX_WRITES_PER_FRAME = 1024;
+    var INITIAL_WRITE_CAPACITY = 512;
 
     var processor = null;
 
@@ -64,6 +66,7 @@ EstyJs.Sound = function (opts) {
     var workletNode = null;
     var gainNode = null;
     var starting = false;
+    var soundEnabled = true;
 
     // Register file as the emulated machine sees it. The chip itself lives in
     // the worklet, so reads are answered from this mirror.
@@ -80,7 +83,7 @@ EstyJs.Sound = function (opts) {
     var rowCount = 0;
     var frameCount = 0;
 
-    var writes = new Int32Array(MAX_WRITES_PER_FRAME * WRITE_FIELDS);
+    var writes = new Int32Array(INITIAL_WRITE_CAPACITY * WRITE_FIELDS);
     var writeCount = 0;
 
     // Cycle within the current frame at which the CPU is executing right now.
@@ -91,8 +94,14 @@ EstyJs.Sound = function (opts) {
     }
 
     function recordWrite(reg, val) {
-        if (writeCount >= MAX_WRITES_PER_FRAME) return;
         var i = writeCount * WRITE_FIELDS;
+        if (i + WRITE_FIELDS > writes.length) {
+            // Rather than drop writes and quietly change what the tune sounds
+            // like, take the one-off allocation.
+            var bigger = new Int32Array(writes.length * 2);
+            bigger.set(writes);
+            writes = bigger;
+        }
         writes[i] = currentCycle();
         writes[i + 1] = reg;
         writes[i + 2] = val;
@@ -136,9 +145,10 @@ EstyJs.Sound = function (opts) {
             return;
         }
 
-        if (gainNode != null) {
+        if (gainNode != null && enabled != soundEnabled) {
             // Ramp rather than jump, so muting does not click.
             gainNode.gain.setTargetAtTime(enabled ? 1 : 0, audioContext.currentTime, 0.01);
+            soundEnabled = enabled;
         }
 
         // Transfer just the part of the buffer we filled.
@@ -199,7 +209,9 @@ EstyJs.Sound = function (opts) {
             gainNode.connect(audioContext.destination);
 
             node.port.onmessage = function (event) {
-                if (event.data.type == 'status') status = event.data;
+                var msg = event.data;
+                if (msg.type != 'status') return;
+                status = { lead: msg.lead, rate: msg.rate, starved: msg.starved };
             };
 
             workletNode = node;

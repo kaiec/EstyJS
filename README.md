@@ -23,7 +23,8 @@ EstyJS (i.e., the JavaScript files) is licensed under the GPL v2 (or later) lice
 
 Further credits:
 - **processor.js** is based on code from [SAE](https://github.com/naTmeg/ScriptedAmigaEmulator), licensed under GPL V2. It is based on [WinUAE](https://github.com/tonioni/WinUAE) and [UAE](https://github.com/bernds/UAE/) respectively, both GPL V2.
-- **sound.js** used code from [DelphiSpec emulator](https://worldofspectrum.net/pub/sinclair/emulators/pc/windows/DelphiSpecSource03.zip), licensed under GPL V2.
+- **estyjs/aym-js/aym-emulator.js** is the YM2149 emulation from [AYM·JS](https://github.com/ponceto/aym-js) by Olivier Poncet, licensed under GPL V2 (or later), included unmodified.
+- **sound.js** used code from the [DelphiSpec emulator](https://worldofspectrum.net/pub/sinclair/emulators/pc/windows/DelphiSpecSource03.zip), licensed under GPL V2, until it was rewritten around AYM·JS.
 - **etos256us.img** is EmuTos 1.3 256K (US English), licensed under GPL V2, and no integral part of this project.
 - **Atari_1040STf-600.png** is adapted from [Bill Bertram](https://en.wikipedia.org/wiki/File:Atari_1040STf.jpg), licensed under CC-BY-SA 2.5.
 - **Sporniket Nostalgie v2** is a font inspired from the Atari ST system font, created by [David Sporn](https://github.com/sporniket/Sporniket-Nostalgie-Sans), licensed under SIL OFL 1.1.

@@ -73,6 +73,11 @@ const RATE_SMOOTHING = 0.002;
 const STARVED_FRAMES = 6;
 const FADE_SECONDS = 0.02;
 
+// Ceiling on unplayed frames. Nothing should come close - the speed correction
+// holds the lead at a handful - but if the audio thread is suspended while the
+// emulator keeps running, frames would otherwise pile up without limit.
+const MAX_QUEUED_FRAMES = 200;
+
 class EstySoundProcessor extends AudioWorkletProcessor {
 
     constructor(options) {
@@ -126,6 +131,8 @@ class EstySoundProcessor extends AudioWorkletProcessor {
         const base = msg.frame * this.cyclesPerFrame;
         this.queue.push({ base: base, writes: msg.writes, index: 0 });
         this.leadEnd = base + this.cyclesPerFrame;
+
+        while (this.queue.length > MAX_QUEUED_FRAMES) this.queue.shift();
     }
 
     // Put playback exactly TARGET_LEAD_FRAMES behind the emulator. Done on the
