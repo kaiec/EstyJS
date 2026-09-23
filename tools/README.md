@@ -49,6 +49,26 @@ drive `esty-headless.js` directly with `keyDown`/`keyUp`.
 
 Screenshots come out as raw 640x512 RGBA, which `ffmpeg` will convert as above.
 
+## Checking that disks still read
+
+```
+node tools/check-disks.js [--check known.json] <image>...
+```
+
+Boots each image and hashes the frame. By default it opens the drive A window
+first, so what gets hashed is a directory listing: it only comes out right if
+the geometry, the boot sector, the FAT and the directory were all read
+correctly, which makes it a usable check on the disk code.
+
+```
+node tools/check-disks.js --save known.json disks/*.st disks/*.msa disks/*.stx
+node tools/check-disks.js --check known.json disks/*.st disks/*.msa disks/*.stx
+```
+
+`--boot-only` skips opening the window, for self-booting disks. `--png DIR`
+writes the frames out as raw RGBA next to the hashes, converted the same way as
+the screenshots above.
+
 ## Rendering a recording
 
 ```

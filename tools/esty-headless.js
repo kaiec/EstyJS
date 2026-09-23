@@ -82,7 +82,7 @@ function createMachine(estyDir, opts = {}) {
     // Everything except sound.js, which is replaced by the recorder below:
     // there is no audio hardware here, and the recording is the point.
     const SOURCES = ['estyjs.js', 'processor.js', 'keyboard.js', 'mfp.js',
-                     'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
+                     'disk.js', 'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
                      'snapshot.js', 'files.js', 'js-unzip.js', 'rawinflate.js'];
     for (const f of SOURCES) {
         const src = fs.readFileSync(path.join(estyDir, f), 'utf8').replace(/^﻿/, '');

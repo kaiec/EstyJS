@@ -55,7 +55,7 @@ EstyJs.fileManager = function (opts) {
                 var entry = unzipper.entries[i];
                 var fname = entry.fileName.toUpperCase();
                 var ext = fname.substr(fname.lastIndexOf('.')).toLowerCase();
-                if (((ext == '.st') || (ext == '.msa') || (ext == '.sts')) && (entry.compressionMethod == 8 | entry.compressionMethod == 0)) {
+                if (((ext == '.st') || (ext == '.msa') || (ext == '.stx') || (ext == '.sts')) && (entry.compressionMethod == 8 | entry.compressionMethod == 0)) {
 
                     if (entry.compressionMethod == 8) {
                         return (new Uint8Array(JSInflate.inflate(entry.data))).buffer;

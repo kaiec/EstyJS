@@ -41,7 +41,7 @@ function fileSelected(evt) {
 			var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
 			if (ext == '.sts') {
 			    estyjs.openSnapshotFile(files[0]);
-			} else if (ext == '.st' || ext == '.msa') {
+			} else if (ext == '.st' || ext == '.msa' || ext == '.stx') {
 			    estyjs.openFloppyFile('A', files[0]);
 			} else if (ext == '.zip') {
 			    estyjs.openZipFile('A', files[0]);
@@ -59,7 +59,7 @@ function fileSelected2(evt) {
             var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
             if (ext == '.sts') {
                 estyjs.openSnapshotFile(files[0]);
-            } else if (ext == '.st' || ext == '.msa') {
+            } else if (ext == '.st' || ext == '.msa' || ext == '.stx') {
                 estyjs.openFloppyFile('B', files[0]);
             } else if (ext == '.zip') {
                 estyjs.openZipFile('B', files[0]);

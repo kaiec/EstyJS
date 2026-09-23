@@ -21,8 +21,13 @@ Current maintainer (since 2024): Kai Eckert
 */
 
 
-// fdc (wd1770) emulation routines for EstyJS
+// fdc (wd1770) emulation routines for EstyJs
 // written by Darren Coles
+//
+// Sectors are found the way the controller finds them: by matching the address
+// field written on the track, not by computing an offset into the image. The
+// disk itself comes from disk.js, which presents every image format as tracks
+// and sectors, so nothing here needs to know about file layouts.
 "use strict";
 
 EstyJs.fdc = function (opts) {
@@ -40,239 +45,172 @@ EstyJs.fdc = function (opts) {
 
     var aborted = false;
 
-    var floppyAdata = new Uint8Array(0);
-    var floppyBdata = new Uint8Array(0);
+    function newDrive() {
+        return {
+            disk: null,
+            currentTrack: 0,
+            status: 0x64,
+            hblCount: 0,      //number of hbls since last command
+            addressIndex: 0   //which address field read address hands over next
+        };
+    }
+
+    var drives = { 'A': newDrive(), 'B': newDrive() };
 
     var driveSide = 0;
     var trackNo = 0;
     var sectorNo = 0;
     var sectorCount = 0;
     var dataReg = 0;
-    var driveStatusA = 0x64; //
-    var driveStatusB = 0x64; //
-
-    var hblCountA = 0;  //number of hbls since last command A
-    var hblCountB = 0; //number of hbls since last command B
-
-    var driveAcurrentTrack = 0;
-    var driveBcurrentTrack = 0;
+    var stepDir = 0;
 
     var commandNo = 0;
     var dmaAddr = 0;
     var commandCompleteTimer = 0;
     var dmaStatusReg = 0;
 
-    // MSA images store, for every track and side, either the raw track or an
-    // RLE stream in which 0xe5 introduces a <byte><count> run. The header says
-    // how many blocks to expect; the stream itself carries no end marker, so
-    // the decoder has to be driven by the header rather than by the data.
-    function decodeMSA(dataview) {
-        var sectors = dataview.getUint16(2);
-        var sides = dataview.getUint16(4) + 1;  //stored as number of sides - 1
-        var startTrack = dataview.getUint16(6);
-        var endTrack = dataview.getUint16(8);
+    /* ----------------------------------------------------------- the drive */
 
-        var trackSize = sectors * 512; //one side of one track
-        var data = new Uint8Array((endTrack - startTrack + 1) * sides * trackSize);
-
-        var offset = 10;
-        var out = 0;
-
-        for (var track = startTrack; track <= endTrack; track++) {
-            for (var side = 0; side < sides; side++) {
-                if (offset + 2 > dataview.byteLength) return data;
-
-                var blockSize = dataview.getUint16(offset);
-                offset += 2;
-
-                var blockEnd = Math.min(offset + blockSize, dataview.byteLength);
-                var trackEnd = out + trackSize;
-
-                if (blockSize == trackSize) {
-                    while (offset < blockEnd) data[out++] = dataview.getUint8(offset++);
-                } else {
-                    while (offset < blockEnd && out < trackEnd) {
-                        var code = dataview.getUint8(offset++);
-                        if (code != 0xe5) {
-                            data[out++] = code;
-                        } else {
-                            if (offset + 3 > blockEnd) break;
-                            code = dataview.getUint8(offset++);
-                            var run = dataview.getUint16(offset, false);
-                            offset += 2;
-                            while (run-- && out < trackEnd) data[out++] = code;
-                        }
-                    }
-                }
-
-                //a malformed track must not shift everything after it
-                out = trackEnd;
-                offset = blockEnd;
-            }
-        }
-
-        return data;
-    }
-
-    function processFile(arrayBuffer) {
-        if (arrayBuffer == null) return new Uint8Array(0);
-
-        var dv = new DataView(arrayBuffer);
-
-        if (dv.byteLength > 10 && dv.getUint16(0, false) == 0x0e0f) {
-            return decodeMSA(dv);
-        }
-
-        return new Uint8Array(arrayBuffer);
-    }
-
-    function processFileA(arrayBuffer) {
-        floppyAdata = processFile(arrayBuffer);
-    }
-
-    function processFileB(arrayBuffer) {
-        floppyBdata = processFile(arrayBuffer);
-    }
-
-    function trackAndSectorValid(geo) {
-        return (sectorNo <= geo.sectors && trackNo < geo.tracks && driveSide < geo.sides);
-    }
-
-    function getDiskGeometry() {
-        var result = new Object();
-
-        var floppyData = null;
-        var possibleTracks = 0;
-
-        switch (selectedDrive) {
-            case 'A':
-                floppyData = floppyAdata;
-                break;
-            case 'B':
-                floppyData = floppyBdata;
-                break;
-        }
-
-        result.sectors = floppyData[24];
-
-        if (result.sectors < 9 | result.sectors > 11 | (floppyData.length / result.sectors != Math.floor(floppyData.length / result.sectors))) {
-            if (floppyData.length / (9 * 512) == Math.floor(floppyData.length / (9 * 512))) {
-                possibleTracks = floppyData.length / 9 / 512;
-                if (possibleTracks > 100) possibleTracks >>= 1;
-                if (possibleTracks < 85) {
-                    result.sectors = 9;
-                }
-            }
-            if (floppyData.length / (10 * 512) == Math.floor(floppyData.length / (10 * 512))) {
-                possibleTracks = floppyData.length / 10 / 512;
-                if (possibleTracks > 100) possibleTracks >>= 1;
-                if (possibleTracks < 85) {
-                    result.sectors = 10;
-                }
-            }
-            if (floppyData.length / (11 * 512) == Math.floor(floppyData.length / (11 * 512))) {
-                possibleTracks = floppyData.length / 11 / 512;
-                if (possibleTracks > 100) possibleTracks >>= 1;
-                if (possibleTracks < 85) {
-                    result.sectors = 11;
-                }
-            }
-        }
-
-        result.tracks = floppyData.length / result.sectors / 512;
-
-        if (result.tracks > 100) {
-            result.sides = 2;
-            result.tracks >>= 1;
-        }
-        else {
-            result.sides = 1;
-        }
-
-        //result.sectors = Math.floor(floppyData.length / 80 / result.sides / 512);
-
-        return result;
-    }
-
-    function getDiskByte(diskGeo,byteOffset) {
-        var sectorOffset = ((sectorNo - 1) + (trackNo * diskGeo.sectors * diskGeo.sides) + (driveSide * diskGeo.sectors)) * 512;
-
-        switch (selectedDrive) {
-            case 'A':
-                if (floppyAdata.length > sectorOffset + byteOffset) return floppyAdata[sectorOffset + byteOffset];
-            case 'B':
-                if (floppyBdata.length > sectorOffset + byteOffset) return floppyBdata[sectorOffset + byteOffset];
-
-        }
-        return 0;
-
+    function drive() {
+        return drives[selectedDrive] || null;
     }
 
     function diskInserted() {
-        switch (selectedDrive) {
-            case 'A':
-                return floppyAdata.length > 0;
-            case 'B':
-                return floppyBdata.length > 0;
-            default:
-                return false;
-        }
+        var d = drive();
+        return d != null && d.disk != null;
     }
 
     function currentTrack() {
-        switch (selectedDrive) {
-            case 'A':
-                return driveAcurrentTrack;
-            case 'B':
-                return driveBcurrentTrack;
-            default:
-                return 0;
-        }
+        var d = drive();
+        return d ? d.currentTrack : 0;
     }
 
     function setcurrentTrack(val) {
-        switch (selectedDrive) {
-            case 'A':
-                driveAcurrentTrack = val;
-                break;
-            case 'B':
-                driveBcurrentTrack = val;
-                break;
-        }
+        var d = drive();
+        if (d) d.currentTrack = val;
     }
 
     function readDriveStatus() {
-        switch (selectedDrive) {
-            case 'A':
-                return driveStatusA;
-            case 'B':
-                return driveStatusB;
-            default:
-                return 0x64;
-        }
-    }
-
-    function resetHblSinceLastCommand() {
-        switch (selectedDrive) {
-            case 'A':
-                hblCountA = 0;
-                break;
-            case 'B':
-                hblCountB = 0;
-                break;
-        }
+        var d = drive();
+        return d ? d.status : 0x64;
     }
 
     function writeDriveStatus(val) {
-        switch (selectedDrive) {
-            case 'A':
-                driveStatusA = val;
-                break;
-            case 'B':
-                driveStatusB = val;
-                break;
+        var d = drive();
+        if (d) d.status = val;
+    }
+
+    function resetHblSinceLastCommand() {
+        var d = drive();
+        if (d) d.hblCount = 0;
+    }
+
+    /* ---------------------------------------------------------- the sector */
+
+    function trackSectors() {
+        var d = drive();
+        if (d == null || d.disk == null) return null;
+
+        //the track register says where the head is, as it did before: nothing
+        //here models the head drifting away from it
+        var track = d.disk.getTrack(trackNo, driveSide);
+        return track ? track.sectors : null;
+    }
+
+    // The controller compares the sector number it was asked for against the
+    // address fields on the track, and the track number in that address field
+    // against its own track register. A disk whose address fields disagree with
+    // where they physically sit is how copy protection works, and answering
+    // record-not-found is how it is meant to behave.
+    function findSector(number) {
+        var sectors = trackSectors();
+        if (sectors == null) return null;
+
+        for (var i = 0; i < sectors.length; i++) {
+            if (sectors[i].id.number == number && sectors[i].id.track == trackNo) {
+                return sectors[i];
+            }
+        }
+
+        return null;
+    }
+
+    // Status after a type II command: bit 7 motor on, bit 5 deleted data mark,
+    // bit 4 record not found, bit 3 CRC error in the data field.
+    function sectorStatus(sector) {
+        if (sector == null) return 0x90;
+
+        var status = 0x80;
+        if (sector.noData) status |= 0x10;
+        if (sector.deleted) status |= 0x20;
+        if (sector.crcError) status |= 0x08;
+
+        return status;
+    }
+
+    // A fuzzy sector does not hold all of its bits stably: the mask marks the
+    // ones that read the same on every revolution, and the rest are noise.
+    function sectorByte(sector, offset) {
+        var value = (sector.data != null && offset < sector.data.length) ? sector.data[offset] : 0;
+
+        if (sector.fuzzyMask != null && offset < sector.fuzzyMask.length) {
+            var mask = sector.fuzzyMask[offset];
+            value = (value & mask) | (((Math.random() * 256) | 0) & ~mask & 0xff);
+        }
+
+        return value;
+    }
+
+    function transferSector(sector) {
+        for (var i = 0; i < sector.size; i++) {
+            memory.writeByte(dmaAddr++, sectorByte(sector, i));
         }
     }
+
+    // Read address hands over the next address field the head passes, which is
+    // how a program finds out what a track really holds. Without a rotation
+    // model the sectors are simply handed out in turn.
+    function readAddress() {
+        var sectors = trackSectors();
+        if (sectors == null || sectors.length == 0) return 0x90;
+
+        var d = drive();
+        var sector = sectors[d.addressIndex % sectors.length];
+        d.addressIndex = (d.addressIndex + 1) % sectors.length;
+
+        memory.writeByte(dmaAddr++, sector.id.track);
+        memory.writeByte(dmaAddr++, sector.id.head);
+        memory.writeByte(dmaAddr++, sector.id.number);
+        memory.writeByte(dmaAddr++, sector.id.size);
+        memory.writeByte(dmaAddr++, (sector.crc >> 8) & 0xff);
+        memory.writeByte(dmaAddr++, sector.crc & 0xff);
+
+        //the controller leaves the track address in the sector register
+        sectorNo = sector.id.track;
+
+        return sector.crcError ? 0x88 : 0x80;
+    }
+
+    // Read track hands back the whole track as it is written on the disk,
+    // gaps and address marks included. Only an image that records that much can
+    // answer it, and a protection asking the question is usually the reason the
+    // image was made in the first place. The real head starts wherever it
+    // happens to be; without a rotation model this always starts at the index.
+    function readTrack() {
+        var d = drive();
+        if (d == null || d.disk == null) return null;
+
+        var track = d.disk.getTrack(trackNo, driveSide);
+        if (track == null || track.image == null) return null;
+
+        for (var i = 0; i < track.image.length; i++) {
+            memory.writeByte(dmaAddr++, track.image[i]);
+        }
+
+        return track.image.length;
+    }
+
+    /* --------------------------------------------------------- the command */
 
     function processCommand() {
         switch (commandNo & 0xf0) {
@@ -326,20 +264,17 @@ EstyJs.fdc = function (opts) {
                 //bug.say(sprintf("fdc: command read sector multiple - %s - side: %d - track: %d - sector: %d - sector count: %d - addr: $%06x", selectedDrive, driveSide, trackNo, sectorNo, sectorCount, dmaAddr));
                 commandCompleteTimer = 5;
                 if (selectedDrive != '') {
-                    var diskGeo = getDiskGeometry();
-                    if (trackAndSectorValid(diskGeo)) {
+                    //a multiple read runs on until the sector count is used up
+                    //or the track runs out of sectors to find
+                    var number = sectorNo;
+                    var remaining = sectorCount;
 
-                        var byteCount = sectorCount * 512;
-
-                        if (sectorCount + sectorNo > diskGeo.sectors) {
-                            byteCount = (diskGeo.sectors - (sectorNo - 1)) * 512;
-                        }
-
-                        //bug.say(sprintf("read from offset $%8x",(((sectorNo-1) + (trackNo * 18) + (driveSide * 9)) * 512)));
-                        for (var i = 0; i < byteCount; i++) {
-                            memory.writeByte(dmaAddr++, getDiskByte(diskGeo,i));
-                        }
+                    while (remaining-- > 0) {
+                        var sector = findSector(number++);
+                        if (sector == null || sector.noData) break;
+                        transferSector(sector);
                     }
+
                     mfp.setFloppyGpio();
                 }
                 break;
@@ -502,15 +437,23 @@ EstyJs.fdc = function (opts) {
     }
 
     self.loadFile = function (drive, filename) {
-        switch (drive) {
-            case 'A':
-                fileManager.loadFile(filename, processFileA);
-                break;
-            case 'B':
-                fileManager.loadFile(filename, processFileB);
-                break;
-        }
+        var target = drives[drive];
+        if (target == null) return;
 
+        fileManager.loadFile(filename, function (arrayBuffer) {
+            var disk = EstyJs.diskImage.load(arrayBuffer);
+
+            target.disk = disk;
+            target.addressIndex = 0;
+
+            if (disk == null) {
+                bug.say("drive " + drive + ": not a readable disk image");
+            } else {
+                bug.say("drive " + drive + ": " + disk.format + " image, " + disk.tracks +
+                        " tracks, " + disk.sides + " side(s), " + disk.sectorsPerTrack +
+                        " sectors per track");
+            }
+        });
     }
 
     self.setMemory = function (mem) {
@@ -519,22 +462,16 @@ EstyJs.fdc = function (opts) {
 
 
     self.processRow = function () {
-        if (driveStatusA & 0x80) {
-            hblCountA++;
-            if ((hblCountA > 200 * 50 * 2)) {
-                driveStatusA &= 0x7f;
-                hblCountA = 0;
+        for (var name in drives) {
+            var d = drives[name];
+
+            if (d.status & 0x80) {
+                d.hblCount++;
+                if (d.hblCount > 200 * 50 * 2) {
+                    d.status &= 0x7f;
+                    d.hblCount = 0;
+                }
             }
-
-        }
-
-        if (driveStatusB & 0x80) {
-            hblCountB++;
-            if ((hblCountB > 200 * 50 * 2)) {
-                driveStatusB &= 0x7f;
-                hblCountB = 0;
-            }
-
         }
 
         if (commandCompleteTimer) {
@@ -593,15 +530,13 @@ EstyJs.fdc = function (opts) {
                         //read data
                         status = 0x90;
                         if (selectedDrive != '') {
-							var diskGeo = getDiskGeometry();
-                            if (trackAndSectorValid(diskGeo)) {
-                                var byteCount = 512;
-                                //bug.say(sprintf("read from offset $%8x",(((sectorNo-1) + (trackNo * 18) + (driveSide * 9)) * 512)));
-                                for (var i = 0; i < byteCount; i++) {
-                                    memory.writeByte(dmaAddr++, getDiskByte(diskGeo,i));
-                                }
-								status = 0x80; // | (currentTrack() ? 0 : 4) | (diskInserted() ? 0 : 16);
+                            var sector = findSector(sectorNo);
+
+                            if (sector != null && !sector.noData) {
+                                transferSector(sector);
                             }
+
+                            status = sectorStatus(sector);
                         }
                         else {
                             bug.say("sector read when no selected drive");
@@ -630,7 +565,10 @@ EstyJs.fdc = function (opts) {
                         break;
                     case 0xc0:
                         //read addr
-                        status = 0x80;
+                        status = 0x90;
+                        if (selectedDrive != '') {
+                            status = readAddress();
+                        }
                         break;
                     case 0xd0:
                         //force interrupt
@@ -639,6 +577,7 @@ EstyJs.fdc = function (opts) {
                     case 0xe0:
                         //read track
                         status = 0xe0 | (currentTrack() ? 0 : 4) | (diskInserted() ? 0 : 16);
+                        if (selectedDrive != '' && readTrack() != null) status = 0x80;
                         break;
                     case 0xf0:
                         //write track
@@ -669,12 +608,13 @@ EstyJs.fdc = function (opts) {
 
     self.getDisplayData = function () {
         var result = new Array();
-        if (driveStatusA & 0x80) {
-            result.push('A: ' + driveAcurrentTrack.toString());
+
+        if (drives['A'].status & 0x80) {
+            result.push('A: ' + drives['A'].currentTrack.toString());
         }
 
-        if (driveStatusB & 0x80) {
-            result.push('B: ' + driveBcurrentTrack.toString());
+        if (drives['B'].status & 0x80) {
+            result.push('B: ' + drives['B'].currentTrack.toString());
         }
 
         return result;

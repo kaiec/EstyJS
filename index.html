@@ -11,6 +11,7 @@
 	<script src="esty2-gui.js"></script>
 
 	<script src="estyjs/estyjs.js"></script>
+	<script src="estyjs/disk.js"></script>
 	<script src="estyjs/processor.js"></script>
 	<script src="estyjs/keyboard.js"></script>
 	<script src="estyjs/mfp.js"></script>
@@ -62,8 +63,8 @@
 		</div>
 		<div id="floppies">
 			<button onclick="document.getElementById('selectedTOS').click();" id="btnTOS"><img src="img/rom.png" id="rom" width="176" height="83"><div>ROM</div></button>
-			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.zip" style="display: none;">
-			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.zip" style="display: none;">
+			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.stx,.zip" style="display: none;">
+			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.stx,.zip" style="display: none;">
 			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-1" width="300" height="83"/><div>DISK A</div></button>
 			<button onclick="document.getElementById('selectedFileB').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-2" width="300" height="83"/><div>DISK B</div></button>
 		</div>
@@ -97,8 +98,8 @@
 			Notable limitations:
 		</p>
 		<ul>
-			<li>Sector level disk images only (.st, .msa). Copy protected originals, which need
-				track level images such as .stx or .ipf, do not run.</li>
+			<li>Copy protection that relies on disk rotation or timing is not emulated, so some
+				original disks still refuse to run.</li>
 			<li>No writing to floppies. Disks are reported to TOS as write protected.</li>
 			<li>Only partial support of keyboard/mouse/joystick.</li>
 			<li>Timer pulse width & high accuracy &lt; 1 scanline is not supported.</li>
@@ -117,27 +118,38 @@
 			Atari ST disks have been imaged in a number of formats over the years, and they fall into
 			two groups. <em>Sector level</em> formats store the data a normal disk holds.
 			<em>Track level</em> formats store the magnetic layout of the disk itself, which is what
-			it takes to preserve the copy protection of original game disks. EstyJS reads the sector
-			level formats:
+			it takes to preserve the copy protection of original game disks. EstyJS reads:
 		</p>
 		<ul>
 			<li><strong>.st</strong> &ndash; a raw dump of every sector, with no header. The most
 				common format, and the one to convert to if in doubt.</li>
 			<li><strong>.msa</strong> &ndash; Magic Shadow Archiver: a header plus one run length
 				encoded block per track. Single and double sided images both work.</li>
-			<li><strong>.zip</strong> &ndash; an archive containing one .st or .msa image.</li>
+			<li><strong>.stx</strong> &ndash; Pasti, the format used to preserve original disks. The
+				address field of every sector is read from the image and matched the way the disk
+				controller matches it, so disks that number their sectors unusually, mark a sector as
+				damaged, or leave bytes deliberately unstable behave as they did on the real machine.
+				Whole track reads are answered from the image as well, which is what a number of
+				protected originals check.</li>
+			<li><strong>.zip</strong> &ndash; an archive containing one .st, .msa or .stx image.</li>
 			<li><strong>.sts</strong> &ndash; not a disk image at all, but a Steem memory snapshot.
 				It restores a whole machine state and is loaded through the same button.</li>
 		</ul>
 		<p>
-			Everything else is not supported. <strong>.dim</strong> (FastCopy Pro) is sector level
-			and could be added, but is not read yet. The track and flux level formats &ndash;
-			<strong>.stx</strong> (Pasti), <strong>.ipf</strong> and <strong>.ctr</strong> (Software
-			Preservation Society, KryoFlux), <strong>.stt</strong> and <strong>.stw</strong> (Steem),
-			<strong>.scp</strong> (SuperCard Pro), <strong>.hfe</strong> (HxC) &ndash; would need an
-			FDC emulation that models whole tracks instead of sectors, which EstyJS does not have.
-			Gzipped images (.st.gz, .msa.gz) are not unpacked, and there is no hard disk emulation of
-			any kind, so ACSI and IDE images cannot be used either.
+			What .stx support does not cover is time. The disk does not rotate: there is no index
+			pulse, sectors are found immediately rather than when they come round, and the read time
+			recorded for each sector is ignored. Protections that measure how long a read takes, or
+			where on the track the head is, therefore still fail. Writing to a .stx image and
+			formatting are not supported either.
+		</p>
+		<p>
+			Everything else is not read at all. <strong>.dim</strong> (FastCopy Pro) is sector level
+			and could be added. <strong>.ipf</strong> and <strong>.ctr</strong> (Software Preservation
+			Society, KryoFlux) need the closed source CAPS library; <strong>.stt</strong> and
+			<strong>.stw</strong> (Steem), <strong>.scp</strong> (SuperCard Pro) and
+			<strong>.hfe</strong> (HxC) are formats for other emulators and for floppy emulator
+			hardware. Gzipped images (.st.gz, .msa.gz) are not unpacked, and there is no hard disk
+			emulation of any kind, so ACSI and IDE images cannot be used either.
 		</p>
 
 
