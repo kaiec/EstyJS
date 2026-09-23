@@ -3,12 +3,12 @@
 # publish-pages.sh - publish every branch and tag into the pages branch.
 #
 # The root of the pages branch holds the root ref (main by default). Every other
-# branch and every tag is published into a subdirectory of the same name, so
-# with git-pages they are reachable as:
+# branch and every tag is published under ver/, which keeps the root clean and
+# leaves one name reserved instead of one per branch:
 #
 #   https://<user>.codeberg.page/EstyJS/
-#   https://<user>.codeberg.page/EstyJS/development/
-#   https://<user>.codeberg.page/EstyJS/v2.2.0/
+#   https://<user>.codeberg.page/EstyJS/ver/development/
+#   https://<user>.codeberg.page/EstyJS/ver/v2.2.0/
 #
 # The pages branch is rebuilt from the refs on every run, so a deleted branch
 # loses its directory. Identical files share their git object, so a published
@@ -23,6 +23,8 @@
 #   --remote NAME     remote to read and push (default origin)
 #   --branch NAME     branch to publish into (default pages)
 #   --root REF        ref served at the root (default main)
+#   --into DIR        directory holding the versions (default ver, empty for
+#                     the root of the branch)
 #   --skip PATTERN    skip refs matching this shell pattern, repeatable
 #   --nojekyll        add .nojekyll, needed on GitHub Pages
 #   --no-push         commit but do not push
@@ -38,6 +40,7 @@ set -euo pipefail
 remote=origin
 pages_branch=pages
 root_ref=main
+into=ver
 push=yes
 dry=no
 nojekyll=no
@@ -48,11 +51,12 @@ while [ $# -gt 0 ]; do
         --remote) remote=$2; shift 2 ;;
         --branch) pages_branch=$2; shift 2 ;;
         --root)   root_ref=$2; shift 2 ;;
+        --into)   into=$2; shift 2 ;;
         --skip)   skips+=("$2"); shift 2 ;;
         --nojekyll) nojekyll=yes; shift ;;
         --no-push) push=no; shift ;;
         --dry-run) dry=yes; push=no; shift ;;
-        -h|--help) sed -n '2,38p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,41p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "unknown option $1" >&2; exit 1 ;;
     esac
 done
@@ -79,6 +83,11 @@ if ! git rev-parse --verify --quiet "refs/remotes/$remote/$root_ref" >/dev/null;
     exit 1
 fi
 
+if [ -n "$into" ] && git ls-tree --name-only "refs/remotes/$remote/$root_ref" | grep -qx "$into"; then
+    echo "$remote/$root_ref already has a $into entry; pick another --into" >&2
+    exit 1
+fi
+
 # what to publish: the root ref at the top, every other branch and tag below it
 refs=()
 while read -r branch; do
@@ -98,7 +107,7 @@ done < <(git tag --list)
 
 echo "root: $remote/$root_ref"
 for entry in ${refs+"${refs[@]}"}; do
-    echo "  ${entry#*:}  <- ${entry%%:*}"
+    echo "  ${into:+$into/}${entry#*:}  <- ${entry%%:*}"
 done
 
 [ "$dry" = yes ] && { echo "dry run, nothing written"; exit 0; }
@@ -112,8 +121,8 @@ git archive "refs/remotes/$remote/$root_ref" | tar -x -C "$build"
 for entry in ${refs+"${refs[@]}"}; do
     ref=${entry%%:*}
     dir=${entry#*:}
-    mkdir -p "$build/$dir"
-    git archive "$ref" | tar -x -C "$build/$dir"
+    mkdir -p "$build/${into:+$into/}$dir"
+    git archive "$ref" | tar -x -C "$build/${into:+$into/}$dir"
 done
 
 if [ "$nojekyll" = yes ]; then

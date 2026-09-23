@@ -10,11 +10,13 @@ The other tools are built on it.
 
 ## Publishing
 
-    tools/publish-pages.sh [--remote NAME] [--branch NAME] [--root REF] [--skip PATTERN]
-                           [--nojekyll] [--no-push] [--dry-run]
+    tools/publish-pages.sh [--remote NAME] [--branch NAME] [--root REF] [--into DIR]
+                           [--skip PATTERN] [--nojekyll] [--no-push] [--dry-run]
 
-Publishes the root ref at the root of the `pages` branch and every other branch and tag in a
-subdirectory of the same name, then commits and pushes. The branch is rebuilt from the refs on each
+Publishes the root ref at the root of the `pages` branch and every other branch and tag under
+`ver/`, then commits and pushes. The container keeps the root clean and reserves one name instead of
+one per branch; `--into` changes it, `--into ''` publishes at the root. Publishing stops if the root
+ref already has an entry of that name. The branch is rebuilt from the refs on each
 run, so a deleted branch loses its directory. Identical files share their git object: publishing
 five versions of EstyJS costs about 12 KiB.
 
