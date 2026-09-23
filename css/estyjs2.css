@@ -274,6 +274,22 @@ button.kb-key .named {
 	transform: skew(18deg);
 }
 
+/* Return is two cells that meet, so that its shape is the machine's */
+button.kb-key.kb-joined {
+	border-bottom: 1px solid #8f9082;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	margin-bottom: 0;
+}
+
+button.kb-key.kb-cont {
+	border-top: 0;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+	margin-top: 0;
+	justify-content: center;
+}
+
 button.kb-key.down {
 	background: linear-gradient(#1f6ac4, #1658ad);
 	border-color: #0e3c7a;

@@ -32,12 +32,14 @@ function blockOf(name, width) {
                 const w = k.match(/w:\s*(\d+)/);
                 const pad = k.match(/(?:pad|skip):\s*(\d+)/);
                 const reserves = /skip:/.test(k);
+                const cont = /cont:\s*true/.test(k);
                 const rows = k.match(/r:\s*(\d+)/);
                 keys.push({
                     s: scancode ? parseInt(scancode[1], 16) : null,
                     w: pad ? parseInt(pad[1], 10) : (w ? parseInt(w[1], 10) : 4),
                     spacer: !!pad,
                     reserves: reserves,
+                    cont: cont,
                     rows: rows ? parseInt(rows[1], 10) : 1
                 });
             }
@@ -78,7 +80,8 @@ for (const block of blocks)
     for (const row of block.rows)
         for (const key of row)
             if (!key.spacer && key.s !== null) {
-                if (seen[key.s]) fail('scancode 0x' + key.s.toString(16) + ' appears more than once');
+                // a key drawn in two halves, such as Return, is one key
+                if (seen[key.s] && !key.cont) fail('scancode 0x' + key.s.toString(16) + ' appears more than once');
                 seen[key.s] = true;
             }
 
