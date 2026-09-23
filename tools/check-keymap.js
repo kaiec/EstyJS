@@ -1,23 +1,19 @@
 /*
- * check-keymap.js - check that every physical key reaches the ST as the right
- * scancode.
+ * check-keymap.js - check the keyboard mapping.
  *
- * The keyboard is driven straight here, without the rest of the machine: a key
- * event goes in, and the bytes the ACIA hands to the ST come out. That makes
- * the mapping checkable key by key, including the ones that used to be wrong.
+ * Drives the keyboard without the rest of the machine: a key event goes in, the
+ * bytes the ACIA hands the ST come out.
  *
  * usage:
  *   node tools/check-keymap.js [--list]
- *
- * --list prints the whole table as the documentation shows it.
  */
 
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-// What the ST keyboard sends, taken from the ST scancode table rather than
-// from the emulator, so that this is a check and not an echo.
+// From the ST scancode table, not from the emulator, so this is a check and
+// not an echo.
 const EXPECTED = {
     Escape: 0x01, Digit1: 0x02, Digit0: 0x0B, Minus: 0x0C, Equal: 0x0D,
     Backspace: 0x0E, Tab: 0x0F, KeyQ: 0x10, KeyY: 0x15, KeyP: 0x19,

@@ -1,13 +1,9 @@
 /*
- * check-docs.js - check that the documentation hangs together.
+ * check-docs.js - check the documentation.
  *
- * The docs are markdown files rendered in the browser by docs.html, with the
- * navigation read from the link list in docs/index.md. Nothing is generated, so
- * nothing fails loudly when a link goes stale: this does that instead.
- *
- * Checks that every page in the navigation exists, that every page is reachable
- * from it, that every relative link and image in every page resolves, and that
- * marked can parse all of them.
+ * Every page in the navigation exists, every page is reachable from it, every
+ * relative link and image resolves, marked parses every page, and the website
+ * links to real pages. Then runs the viewer against a stub DOM.
  *
  * usage:
  *   node tools/check-docs.js
@@ -32,7 +28,7 @@ function allDocs(dir = docsDir, prefix = '') {
     return found;
 }
 
-// the navigation, read the same way the viewer reads it
+//read the same way the viewer reads it
 function navigationOf(markdown) {
     const pages = [];
     let section = null;
@@ -94,11 +90,7 @@ for (const m of site.matchAll(/href="docs\.html#([^"]*)"/g))
     if (!docs.includes(m[1])) fail('index.html links to docs.html#' + m[1] + ', which is not a page');
 console.log('ok   the viewer and the links from the website are in place');
 
-// 5. the viewer itself, driven without a browser
-//
-// esty2-docs.js is the part with no other way to fail loudly: it rewrites the
-// links of every page it renders. A small stand-in for the browser is enough to
-// run it for real.
+// 5. the viewer, driven without a browser
 const vm = require('vm');
 
 function element(tag) {
@@ -127,7 +119,7 @@ function element(tag) {
         set innerHTML(html) {
             self.children = [];
             self._html = html;
-            // enough of a parse to hold the things the viewer touches
+            //enough of a parse for what the viewer touches
             for (const m of html.matchAll(/<a href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)) {
                 const a = element('a');
                 a.attributes.href = m[1];
@@ -204,13 +196,33 @@ vm.runInContext(fs.readFileSync(path.join(root, 'esty2-docs.js'), 'utf8'), sandb
     const html = nodes.docscontent.innerHTML;
     if (!/<table>/.test(html)) fail('the disk images page rendered without its table');
 
-    sandbox.window.location.hash = '#using/joystick';
-    sandbox.EstyDocs.start();
-    await new Promise(r => setTimeout(r, 50));
+    // any page that links to a sibling will do
+    let linking = null;
+    for (const page of docs) {
+        const markdown = fs.readFileSync(path.join(docsDir, page + '.md'), 'utf8');
+        const link = markdown.match(/\]\((?!https?:|#|mailto:)([^)]+\.md)\)/);
+        if (link) {
+            const dir = path.dirname(page);
+            linking = {
+                page,
+                expect: '#' + path.normalize(path.join(dir === '.' ? '' : dir, link[1]))
+                    .replace(/\\/g, '/').replace(/\.md$/, '')
+            };
+            break;
+        }
+    }
 
-    const links = nodes.docscontent._find('a').map(a => a.href);
-    if (!links.includes('#using/keyboard'))
-        fail('a link to keyboard.md was not turned into #using/keyboard, got: ' + links.join(' '));
+    if (!linking) fail('no page links to another, so link rewriting is untested');
+    else {
+        sandbox.window.location.hash = '#' + linking.page;
+        sandbox.EstyDocs.start();
+        await new Promise(r => setTimeout(r, 50));
+
+        const links = nodes.docscontent._find('a').map(a => a.href);
+        if (!links.includes(linking.expect))
+            fail(linking.page + ': expected a link rewritten to ' + linking.expect +
+                 ', got: ' + links.join(' '));
+    }
 
     // the front page image lives outside docs/, so it must resolve out of it
     sandbox.window.location.hash = '#index';

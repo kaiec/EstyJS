@@ -1,13 +1,9 @@
 /*
- * check-disks.js - boot a set of disk images and check nothing changed.
+ * check-disks.js - boot disk images and compare the frames.
  *
- * Reading a disk is easy to break in ways that do not throw: a geometry guessed
- * differently, a sector found at the wrong offset, a format decoded as noise.
- * What catches that is the picture on screen, because it only looks right if
- * the boot sector, the FAT and the directory were all read correctly.
- *
- * Each image is booted headlessly; unless --boot-only is given the drive A
- * window is opened, so the frame that gets hashed is a directory listing.
+ * Unless --boot-only is given, the drive A window is opened, so the hashed
+ * frame is a directory listing. It only renders correctly if geometry, boot
+ * sector, FAT and directory were read correctly.
  *
  * usage:
  *   node tools/check-disks.js <image>...              print a hash per image

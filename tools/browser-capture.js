@@ -1,15 +1,13 @@
 /*
- * browser-capture.js - record what EstyJs actually plays, in a real browser.
+ * browser-capture.js - record what EstyJs plays, in a real browser.
  *
  * Serves the working copy, drives headless Chromium over the DevTools protocol,
  * boots a disk, switches sound on and taps the audio graph, then writes what
- * came out to a WAV file. Also prints the worklet's own view of how it is
- * doing: how many frames of sound are buffered ahead of playback, and the speed
- * correction being applied to hold it there.
+ * came out to a WAV file. Prints the worklet's buffer lead and the speed
+ * correction applied to hold it.
  *
- * This is the only way to test the part that actually went wrong. The offline
- * renderer (render-psg.mjs) proves the emulation and the chip are right; this
- * proves the audio survives being played in real time.
+ * render-psg.mjs covers the emulation and the chip. This covers the audio path
+ * in real time.
  *
  * usage:
  *   node tools/browser-capture.js <disk.st> <out.wav> [options]
@@ -21,8 +19,7 @@
  *   --run X,Y       launch a program from the desktop, as in record-psg.js
  *   --port N        port for the local server (default 8123)
  *   --status        print the worklet's per-second report rather than a summary
- *   --shot FILE     save a PNG of the screen when the recording ends, so you
- *                   can see what the machine was actually doing
+ *   --shot FILE     save a PNG of the screen when the recording ends
  *   --mash C,MS     hold key code C for MS milliseconds, repeatedly, while
  *                   recording - for sound effects that need a button pressed
  *                   (17 is the joystick fire button)

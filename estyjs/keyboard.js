@@ -99,10 +99,8 @@ EstyJs.Keyboard = function (opts) {
     var readData = 0;
     var writeData = 0;
 
-    // Physical key (KeyboardEvent.code) to ST scancode. code names the key by
-    // position, identically on every keyboard layout and in every browser, which
-    // is what an ST scancode means too: the two line up without a translation
-    // that depends on where the user lives.
+    // Physical key (KeyboardEvent.code) to ST scancode. Both name a position,
+    // independently of the keyboard layout and of the browser.
     var stScancodes = {
         'Escape':          0x01,   // Esc
         'Digit1':          0x02,   // 1
@@ -311,8 +309,8 @@ EstyJs.Keyboard = function (opts) {
 
     function keyDown(evt) {
         if (self.active) {
-            //a held key repeats in TOS, not in the keyboard, so the repeats the
-            //browser sends would be make codes with no break between them
+            //TOS repeats held keys, the keyboard does not; browser repeats
+            //would be make codes without a break
             if (!evt.repeat) registerKeyDown(evt.code);
             if (!evt.metaKey) return false;
         }
@@ -437,8 +435,7 @@ EstyJs.Keyboard = function (opts) {
         if (self.active && !evt.metaKey) return false;
     }
 
-    // An ST key pressed directly, with no host key involved: this is how the on
-    // screen keyboard reaches keys a PC keyboard does not have.
+    // An ST key with no host key involved, for the on screen keyboard.
     self.pressKey = function (scancode) {
         if (scancode) dataOut.push(scancode & 0x7f);
     }
@@ -447,8 +444,7 @@ EstyJs.Keyboard = function (opts) {
         if (scancode) dataOut.push(0x80 | (scancode & 0x7f));
     }
 
-    // Called for every key the host sends, so that something watching can show
-    // where it landed on the ST keyboard.
+    // Called for every key the host sends: (scancode, down, physicalKey).
     self.onKey = null;
 
     self.checkJoystick = function () {

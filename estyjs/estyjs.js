@@ -254,8 +254,7 @@ function EstyJs(output) {
 		fileManager.getZipFilenames(file, zipCallback);
 	}
 
-	// The on screen keyboard: watch what the host keyboard sends, and send ST
-	// keys that no host key is mapped to.
+	// For the on screen keyboard.
 	self.setKeyListener = function (listener) {
 		keyboard.onKey = listener;
 	}

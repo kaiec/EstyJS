@@ -21,7 +21,7 @@ function pauseResume() {
 }
 
 
-// What the file picker accepts, for the message shown when it does not.
+// What the picker accepts, for the message when it does not.
 var READABLE_FILES = '.st, .msa, .stx, .zip and .sts';
 
 function diskMessage(text, isProblem) {
@@ -46,8 +46,8 @@ function describeDisk(result) {
 	       (result.sides > 1 ? 'double sided' : 'single sided');
 }
 
-// A file only counts as inserted once it has been read and understood, which
-// happens after the picker has returned: until then nothing on screen changes.
+// A file counts as inserted once it has been read, which is after the picker
+// has returned.
 function diskLoaded(drive, name, result) {
 	if (result && result.snapshot) {
 		diskMessage('Loaded the snapshot in ' + name + '.', false);
@@ -67,7 +67,7 @@ function diskLoaded(drive, name, result) {
 function diskSelected(evt, drive) {
 	var files = evt.target.files;
 
-	//so that picking the same file again is not ignored
+	//so that picking the same file twice is not ignored
 	evt.target.value = '';
 
 	if (files.length == 0) return;
@@ -87,7 +87,7 @@ function diskSelected(evt, drive) {
 	} else if (ext == '.zip') {
 		estyjs.openZipFile(drive, file, loaded);
 	} else {
-		//nothing was loaded, so whatever is in the drive stays there
+		//nothing was loaded, so the drive keeps what it had
 		diskMessage('EstyJS cannot read ' + (ext == '' ? 'files without an extension' : ext + ' files') +
 		            '. It reads ' + READABLE_FILES + '.', true);
 	}
@@ -128,9 +128,8 @@ function colorToggle() {
     }
 }
 
-// Cursor keys and control are joystick 1 while this is on, and ordinary keys
-// when it is off. Like the other buttons here, the label says what a click
-// does rather than what the state is.
+// Cursor keys and control are joystick 1 while this is on. The label says what
+// a click does, like the other buttons.
 var joystickEnabled = true;
 
 function joystickToggle() {

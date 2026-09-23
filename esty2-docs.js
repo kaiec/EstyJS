@@ -22,14 +22,10 @@ Current maintainer (since 2024): Kai Eckert
 
 // the documentation viewer
 //
-// The documentation is a set of markdown files under docs/, and this renders
-// them in the browser. Nothing is generated ahead of time, so the docs are the
-// same files whether they are read here, in an editor, or on whichever forge
-// the repository happens to live on, and any copy of the repository is a
-// complete documentation site without a build step.
+// Renders the markdown files under docs/ in the browser. Nothing is generated,
+// so the files are the documentation wherever they are read.
 //
-// The navigation is read from the link list in docs/index.md, so pages are
-// added by editing that one file.
+// The navigation is the link list in docs/index.md.
 "use strict";
 
 var EstyDocs = (function () {
@@ -43,8 +39,7 @@ var EstyDocs = (function () {
 
     /* -------------------------------------------------------------- paths */
 
-    // Links inside a document are relative to that document, the way they are
-    // when the same file is read on a forge or in an editor.
+    // Links are relative to the document, as they are when read unrendered.
     function resolve(href, fromPage) {
         return new URL(href, new URL(ROOT + fromPage, window.location.href));
     }
@@ -73,8 +68,7 @@ var EstyDocs = (function () {
 
     /* --------------------------------------------------------- navigation */
 
-    // The nav is the link list in docs/index.md: a level two heading starts a
-    // section, and every link to a .md file underneath it is a page.
+    // A level two heading starts a section, every .md link under it is a page.
     function readNavigation(markdown) {
         var sections = [];
         var section = null;
@@ -129,9 +123,8 @@ var EstyDocs = (function () {
 
     /* ----------------------------------------------------------- one page */
 
-    // Rewrite what the markdown means relative to itself into what the viewer
-    // needs: links between documents become hash routes, and everything else
-    // is resolved against the document's own directory.
+    // Links between documents become hash routes. Everything else is resolved
+    // against the document's directory.
     function adjustLinks(container, page) {
         container.querySelectorAll('a[href]').forEach(function (link) {
             var href = link.getAttribute('href');
@@ -151,8 +144,8 @@ var EstyDocs = (function () {
         });
     }
 
-    // A short list of the sections of a long page. These scroll rather than
-    // link, because the address bar is already spoken for by the router.
+    // Sections of a long page. They scroll instead of linking, since the hash
+    // is the route.
     function drawContents(container) {
         var headings = container.querySelectorAll('h2');
         if (headings.length < 3) return;
@@ -217,7 +210,7 @@ var EstyDocs = (function () {
             navigation = readNavigation(markdown);
             drawNavigation();
         }).catch(function () {
-            //the viewer still works page by page without a contents list
+            //without a contents list the viewer still works page by page
         }).then(function () {
             show(pageFromHash());
         });

@@ -24,10 +24,8 @@ Current maintainer (since 2024): Kai Eckert
 // fdc (wd1770) emulation routines for EstyJs
 // written by Darren Coles
 //
-// Sectors are found the way the controller finds them: by matching the address
-// field written on the track, not by computing an offset into the image. The
-// disk itself comes from disk.js, which presents every image format as tracks
-// and sectors, so nothing here needs to know about file layouts.
+// Sectors are found by matching the address field on the track, not by
+// computing an offset into the image. The disk comes from disk.js.
 "use strict";
 
 EstyJs.fdc = function (opts) {
@@ -111,17 +109,14 @@ EstyJs.fdc = function (opts) {
         var d = drive();
         if (d == null || d.disk == null) return null;
 
-        //the track register says where the head is, as it did before: nothing
-        //here models the head drifting away from it
+        //the track register says where the head is; drift is not modelled
         var track = d.disk.getTrack(trackNo, driveSide);
         return track ? track.sectors : null;
     }
 
-    // The controller compares the sector number it was asked for against the
-    // address fields on the track, and the track number in that address field
-    // against its own track register. A disk whose address fields disagree with
-    // where they physically sit is how copy protection works, and answering
-    // record-not-found is how it is meant to behave.
+    // The sector number must match an address field on the track, and the
+    // track number in that address field must match the track register.
+    // Protected disks rely on the mismatch answering record-not-found.
     function findSector(number) {
         var sectors = trackSectors();
         if (sectors == null) return null;
@@ -135,8 +130,8 @@ EstyJs.fdc = function (opts) {
         return null;
     }
 
-    // Status after a type II command: bit 7 motor on, bit 5 deleted data mark,
-    // bit 4 record not found, bit 3 CRC error in the data field.
+    // Type II status: bit 7 motor on, bit 5 deleted data mark, bit 4 record
+    // not found, bit 3 CRC error in the data field.
     function sectorStatus(sector) {
         if (sector == null) return 0x90;
 
@@ -148,8 +143,8 @@ EstyJs.fdc = function (opts) {
         return status;
     }
 
-    // A fuzzy sector does not hold all of its bits stably: the mask marks the
-    // ones that read the same on every revolution, and the rest are noise.
+    // The mask marks the bits that read the same on every revolution. The rest
+    // are noise.
     function sectorByte(sector, offset) {
         var value = (sector.data != null && offset < sector.data.length) ? sector.data[offset] : 0;
 
@@ -167,9 +162,8 @@ EstyJs.fdc = function (opts) {
         }
     }
 
-    // Read address hands over the next address field the head passes, which is
-    // how a program finds out what a track really holds. Without a rotation
-    // model the sectors are simply handed out in turn.
+    // Returns the next address field the head passes. Without a rotation model
+    // the sectors are handed out in turn.
     function readAddress() {
         var sectors = trackSectors();
         if (sectors == null || sectors.length == 0) return 0x90;
@@ -191,11 +185,9 @@ EstyJs.fdc = function (opts) {
         return sector.crcError ? 0x88 : 0x80;
     }
 
-    // Read track hands back the whole track as it is written on the disk,
-    // gaps and address marks included. Only an image that records that much can
-    // answer it, and a protection asking the question is usually the reason the
-    // image was made in the first place. The real head starts wherever it
-    // happens to be; without a rotation model this always starts at the index.
+    // Returns the whole track, gaps and address marks included, from the STX
+    // track image. Always starts at the index, since the head position is not
+    // modelled.
     function readTrack() {
         var d = drive();
         if (d == null || d.disk == null) return null;
@@ -264,8 +256,8 @@ EstyJs.fdc = function (opts) {
                 //bug.say(sprintf("fdc: command read sector multiple - %s - side: %d - track: %d - sector: %d - sector count: %d - addr: $%06x", selectedDrive, driveSide, trackNo, sectorNo, sectorCount, dmaAddr));
                 commandCompleteTimer = 5;
                 if (selectedDrive != '') {
-                    //a multiple read runs on until the sector count is used up
-                    //or the track runs out of sectors to find
+                    //runs until the sector count is used up or a sector is
+                    //not found
                     var number = sectorNo;
                     var remaining = sectorCount;
 
@@ -436,8 +428,8 @@ EstyJs.fdc = function (opts) {
         return status;
     }
 
-    // The load is asynchronous, so whether the file turned out to be a disk at
-    // all is only known later: callback is how the caller gets told.
+    // Loading is asynchronous. callback reports what the file turned out to
+    // be, or that it was not a disk image.
     self.loadFile = function (drive, filename, callback) {
         var target = drives[drive];
         if (target == null) return;

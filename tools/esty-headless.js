@@ -6,8 +6,8 @@
  * mouse, click, grab the screen, and record every PSG register write with the
  * exact ST clock cycle it happened on.
  *
- * Frames are pumped by hand rather than by the clock, so a run is deterministic
- * and goes as fast as the CPU allows (~13x real time).
+ * Frames are pumped by hand, not by the clock, so a run is deterministic and
+ * goes as fast as the CPU allows (~13x real time).
  */
 
 const fs = require('fs');

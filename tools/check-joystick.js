@@ -1,14 +1,12 @@
 /*
- * check-joystick.js - check that the joystick switch switches.
+ * check-joystick.js - check the joystick switch.
  *
- * With the switch on, the cursor keys and control are joystick 1; with it off
- * they have to be ordinary keys again. Nothing in the emulator reports that
- * directly, so it is measured through a game that only responds to the
- * joystick: two identical machines are run, a key is pressed in one of them,
- * and the question is whether the picture ends up different.
+ * With the switch on, cursor keys and control are joystick 1; with it off they
+ * are keys. Measured through a game that responds to joystick 1 only: two
+ * identical machines, one key press, and whether the frames differ.
  *
- * Needs a disk that sits at a joystick prompt after booting. Buggy Boy stops at
- * its course selection screen, which is what the default frame count is for.
+ * Needs a disk that stops at a joystick prompt. The default frame count suits
+ * Buggy Boy's course selection screen.
  *
  * usage:
  *   node tools/check-joystick.js <disk> [boot-frames]

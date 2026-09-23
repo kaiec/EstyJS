@@ -1,9 +1,8 @@
 /*
- * check-picker.js - check what the file picker does with each kind of file.
+ * check-picker.js - check the file picker.
  *
- * Picking a file EstyJS cannot read has to look different from picking one it
- * can, and different again from nothing happening. That is browser code, so it
- * runs here against a stub DOM and a stub emulator rather than a real page.
+ * Runs the handlers from esty2-gui.js against a stub DOM and a stub emulator,
+ * and checks the message and the drive state per file type.
  *
  * usage:
  *   node tools/check-picker.js

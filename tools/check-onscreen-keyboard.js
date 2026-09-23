@@ -1,11 +1,8 @@
 /*
  * check-onscreen-keyboard.js - check the ST keyboard drawn in the page.
  *
- * The panel is a picture of a real ST keyboard, so the things that can quietly
- * go wrong are structural: a key listed twice, a row that no longer adds up to
- * the width of the others, an ST key that disappeared, a country missing its
- * keycaps. All of that is in the source, so it is checked from the source
- * rather than by driving a browser.
+ * Structural checks from source: row widths, every ST key present once, four
+ * countries with keycaps, the national differences, the ISO key rule.
  *
  * usage:
  *   node tools/check-onscreen-keyboard.js [--list]

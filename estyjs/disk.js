@@ -22,30 +22,29 @@ Current maintainer (since 2024): Kai Eckert
 
 // disk image decoding for EstyJS
 //
-// Every supported format is decoded into the same shape, so that the FDC only
-// ever deals with tracks and sectors and never with file layouts:
+// Every format is decoded into one structure, so that the FDC deals with tracks
+// and sectors only:
 //
 //   disk.format            'ST', 'MSA' or 'STX'
 //   disk.sides             1 or 2
 //   disk.tracks            tracks per side
-//   disk.sectorsPerTrack   nominal, for reporting only
-//   disk.getTrack(t, side) -> { sectors: [...], image } or null if unformatted
+//   disk.sectorsPerTrack   nominal, for reporting
+//   disk.getTrack(t, side) -> { sectors, image } or null if unformatted
 //
-// image is the raw track as a read track command would return it, present only
-// for STX images of disks that carry something a sector cannot describe.
+// image is the raw track as read track returns it, STX only.
 //
-// and each sector carries what the WD1772 would find on the disk:
+// Per sector:
 //
-//   id      { track, head, number, size }   the address field, as recorded
-//   crc     the address field CRC, as recorded
-//   size    data length in bytes, 128 << id.size
-//   data    Uint8Array, or null when the sector has no data block
-//   crcError, deleted, noData, fuzzy        FDC status as recorded
-//   fuzzyMask  bytes that read the same every time (STX only)
+//   id         { track, head, number, size }, the address field as recorded
+//   crc        address field CRC as recorded
+//   size       data length, 128 << id.size
+//   data       Uint8Array, or null without a data block
+//   crcError, deleted, noData, fuzzy   FDC status as recorded
+//   fuzzyMask  bytes that read the same every revolution (STX only)
 //
-// A plain .ST or .MSA image has no address fields of its own, so it gets the
-// ones a normally formatted disk would have: sectors numbered from 1, the ID
-// track and side matching where the sector physically sits.
+// .ST and .MSA have no address fields, so they get the ones a normally
+// formatted disk would have: sectors numbered from 1, ID track and side
+// matching the physical position.
 "use strict";
 
 EstyJs.diskImage = (function () {
@@ -84,9 +83,9 @@ EstyJs.diskImage = (function () {
 
     /* -------------------------------------------------------- raw sectors */
 
-    // .ST images carry no geometry of their own: it has to be recovered from
-    // the image length and the sector count in the boot sector. Kept exactly as
-    // it always was, because which images load depends on it.
+    // .ST carries no geometry. It is derived from the image length and the
+    // sector count in the boot sector. Unchanged, since which images load
+    // depends on it.
     function rawGeometry(data) {
         var sectors = data[24];
         var possibleTracks = 0;
@@ -120,8 +119,7 @@ EstyJs.diskImage = (function () {
         return { sectors: sectors, tracks: tracks, sides: sides };
     }
 
-    // Sectors are stored in the order the drive meets them: track 0 side 0,
-    // track 0 side 1, track 1 side 0, and so on.
+    // Sector order is track 0 side 0, track 0 side 1, track 1 side 0, ...
     function fromRaw(data, format) {
         var geo = rawGeometry(data);
         var trackTable = {};
@@ -145,10 +143,9 @@ EstyJs.diskImage = (function () {
 
     /* ----------------------------------------------------------------- MSA */
 
-    // MSA stores, for every track and side, either the raw track or an RLE
-    // stream in which 0xe5 introduces a <byte><count> run. The header says how
-    // many blocks to expect; the stream itself carries no end marker, so the
-    // decoder has to be driven by the header rather than by the data.
+    // Per track and side, either the raw track or an RLE stream in which 0xe5
+    // introduces a <byte><count> run. The stream has no end marker, so decoding
+    // is driven by the header.
     function decodeMSA(dataview) {
         var sectors = dataview.getUint16(2);
         var sides = dataview.getUint16(4) + 1;  //stored as number of sides - 1
@@ -199,15 +196,11 @@ EstyJs.diskImage = (function () {
 
     /* ----------------------------------------------------------------- STX */
 
-    // Pasti images describe what is actually on the disk: the address field of
-    // every sector with its recorded FDC status, an optional image of the whole
-    // track, and a mask for bytes that read differently every revolution.
-    //
-    // Layout, all little-endian:
+    // Pasti. Layout, all little-endian:
     //   file descriptor  16 bytes, 'RSY\0', version 3
     //   track record     descriptor(16) [sector descriptors] [fuzzy mask] track data
     //
-    // Sector data offsets are relative to the start of the track data, and may
+    // Sector data offsets are relative to the start of the track data, and
     // point either into the track image or at a separate sector image.
     function decodeSTX(dataview, bytes) {
         if (dataview.byteLength < 16) return null;
@@ -267,8 +260,8 @@ EstyJs.diskImage = (function () {
                 var trackDataStart = p;
                 var fuzzyUsed = 0;
 
-                //the track image, when present, sits at the front of the track
-                //data, behind a header of two or four bytes
+                //the track image sits at the front of the track data, behind a
+                //header of two or four bytes
                 if (trackFlags & 0x40) {
                     var q = trackDataStart;
                     if (trackFlags & 0x80) q += 2;   //first sync offset, unused here
@@ -295,7 +288,7 @@ EstyJs.diskImage = (function () {
                         }
                     }
 
-                    //fuzzy mask bytes are handed out to the fuzzy sectors in turn
+                    //the mask is split between the fuzzy sectors in order
                     if ((d.fdcFlags & 0x80) && fuzzyStart + fuzzyUsed + size <= bytes.length &&
                         fuzzyUsed + size <= fuzzyCount) {
                         mask = bytes.subarray(fuzzyStart + fuzzyUsed, fuzzyStart + fuzzyUsed + size);
@@ -343,9 +336,7 @@ EstyJs.diskImage = (function () {
 
     /* --------------------------------------------------------------- entry */
 
-    // Formats are told apart by content, not by file name, so a mislabelled
-    // image still loads and a file that is not an image at all is rejected
-    // instead of being mounted as noise.
+    // Formats are told apart by content, not by file name.
     self.load = function (arrayBuffer) {
         if (arrayBuffer == null || arrayBuffer.byteLength < 16) return null;
 
@@ -361,8 +352,7 @@ EstyJs.diskImage = (function () {
             return decodeSTX(dataview, bytes);
         }
 
-        //anything else is taken as a raw sector dump, which has no signature to
-        //check, so only the shape of it can say whether it is plausible
+        //anything else is a raw sector dump, which has no signature
         if (arrayBuffer.byteLength < 512 || (arrayBuffer.byteLength % 512) != 0) return null;
 
         return fromRaw(bytes, 'ST');
