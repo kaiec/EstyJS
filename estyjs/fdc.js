@@ -62,64 +62,76 @@ EstyJs.fdc = function (opts) {
     var commandCompleteTimer = 0;
     var dmaStatusReg = 0;
 
+    // MSA images store, for every track and side, either the raw track or an
+    // RLE stream in which 0xe5 introduces a <byte><count> run. The header says
+    // how many blocks to expect; the stream itself carries no end marker, so
+    // the decoder has to be driven by the header rather than by the data.
     function decodeMSA(dataview) {
-        var data = new Array()
+        var sectors = dataview.getUint16(2);
+        var sides = dataview.getUint16(4) + 1;  //stored as number of sides - 1
+        var startTrack = dataview.getUint16(6);
+        var endTrack = dataview.getUint16(8);
+
+        var trackSize = sectors * 512; //one side of one track
+        var data = new Uint8Array((endTrack - startTrack + 1) * sides * trackSize);
 
         var offset = 10;
-        var run = 0;
-        var code = 0;
+        var out = 0;
 
-        var trackSize = dataview.getUint16(2) * dataview.getUint16(4) * 512; //calculate no. sectors * no. sides * sector size
+        for (var track = startTrack; track <= endTrack; track++) {
+            for (var side = 0; side < sides; side++) {
+                if (offset + 2 > dataview.byteLength) return data;
 
-        while (offset < dataview.byteLength) {
-            var blockSize = dataview.getUint16(offset);
-            offset += 2;
+                var blockSize = dataview.getUint16(offset);
+                offset += 2;
 
-            if (blockSize == trackSize) {
-                while (blockSize--) data.push(dataview.getUint8(offset++));
-            } else {
-                while (blockSize) {
-                    code = dataview.getUint8(offset++);
-                    blockSize--;
-                    if (code != 0xe5) {
-                        data.push(code);
-                    } else {
-                        code = dataview.getUint8(offset++);
-                        run = dataview.getUint16(offset, false);
-                        offset += 2;
-                        blockSize -= 3;
-                        while (run--) { data.push(code); }
+                var blockEnd = Math.min(offset + blockSize, dataview.byteLength);
+                var trackEnd = out + trackSize;
+
+                if (blockSize == trackSize) {
+                    while (offset < blockEnd) data[out++] = dataview.getUint8(offset++);
+                } else {
+                    while (offset < blockEnd && out < trackEnd) {
+                        var code = dataview.getUint8(offset++);
+                        if (code != 0xe5) {
+                            data[out++] = code;
+                        } else {
+                            if (offset + 3 > blockEnd) break;
+                            code = dataview.getUint8(offset++);
+                            var run = dataview.getUint16(offset, false);
+                            offset += 2;
+                            while (run-- && out < trackEnd) data[out++] = code;
+                        }
                     }
                 }
+
+                //a malformed track must not shift everything after it
+                out = trackEnd;
+                offset = blockEnd;
             }
         }
 
-        return new Uint8Array(data);
+        return data;
+    }
+
+    function processFile(arrayBuffer) {
+        if (arrayBuffer == null) return new Uint8Array(0);
+
+        var dv = new DataView(arrayBuffer);
+
+        if (dv.byteLength > 10 && dv.getUint16(0, false) == 0x0e0f) {
+            return decodeMSA(dv);
+        }
+
+        return new Uint8Array(arrayBuffer);
     }
 
     function processFileA(arrayBuffer) {
-        if (arrayBuffer != null) {
-            var dv = new DataView(arrayBuffer);
-            var magicKey = dv.getUint16(0, false);
-
-            if (magicKey == 0x0e0f) {
-                floppyAdata = new decodeMSA(dv);
-            } else {
-                floppyAdata = new Uint8Array(arrayBuffer);
-            }
-        }
-        else {
-            floppyAdata = Uint8Array(0);
-        }
+        floppyAdata = processFile(arrayBuffer);
     }
 
     function processFileB(arrayBuffer) {
-        if (arrayBuffer != null) {
-            floppyBdata = new Uint8Array(arrayBuffer);
-        }
-        else {
-            floppyBdata = Uint8Array(0);
-        }
+        floppyBdata = processFile(arrayBuffer);
     }
 
     function trackAndSectorValid(geo) {
