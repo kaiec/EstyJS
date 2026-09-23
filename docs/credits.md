@@ -15,4 +15,5 @@ Further credits:
 - **sound.js** used code from the [DelphiSpec emulator](https://worldofspectrum.net/pub/sinclair/emulators/pc/windows/DelphiSpecSource03.zip), licensed under GPL V2, until it was rewritten around AYM·JS.
 - **etos256us.img** and **etos192us.img** are EmuTOS 1.4 (US English), licensed under GPL V2, and no integral part of this project.
 - **Atari_1040STf-600.png** is adapted from [Bill Bertram](https://en.wikipedia.org/wiki/File:Atari_1040STf.jpg), licensed under CC-BY-SA 2.5.
+- **vendor/marked.min.js** is [marked](https://github.com/markedjs/marked) by Christopher Jeffrey and contributors, licensed under the MIT license, included unmodified. It renders this documentation in the browser.
 - **Sporniket Nostalgie v2** is a font inspired from the Atari ST system font, created by [David Sporn](https://github.com/sporniket/Sporniket-Nostalgie-Sans), licensed under SIL OFL 1.1.

@@ -49,6 +49,19 @@ drive `esty-headless.js` directly with `keyDown`/`keyUp`.
 
 Screenshots come out as raw 640x512 RGBA, which `ffmpeg` will convert as above.
 
+## Checking the documentation
+
+```
+node tools/check-docs.js
+```
+
+The documentation is markdown rendered in the browser, so nothing fails loudly
+when a link goes stale. This checks that every page in the navigation exists,
+that every page is reachable from it, that every relative link and image
+resolves, that marked can parse all of them, and that the links from the website
+point at real pages. It then runs the viewer itself against a stand-in for the
+browser, to check that pages render and that links between them are rewritten.
+
 ## Checking that disks still read
 
 ```

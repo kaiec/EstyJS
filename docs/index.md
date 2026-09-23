@@ -19,6 +19,17 @@ is honest about where it stops - see [limitations](using/limitations.md).
 
 - [Tools](inside/tools.md) - the command line helpers for sound, disks and the keyboard
 
+## How this is published
+
+These pages are markdown files under `docs/`, rendered in the browser by
+[`docs.html`](../docs.html) using [marked](https://github.com/markedjs/marked). There is no build
+step and no generator: the files are the documentation, whether they are read here, in an editor, or
+on whichever forge the repository is hosted on. Any copy of the repository is a complete
+documentation site, served by any static web server.
+
+The navigation above is read from this page, so a new page is added by writing it and linking it
+here.
+
 ## About
 
 - [Releases](releases.md) - what changed, and when

@@ -24,8 +24,9 @@ Everything lives in [docs/](docs/index.md):
 
 ## Running it yourself
 
-There is no build step. Clone the repository and open `index.html`, or serve the directory with any
-static web server.
+There is no build step: clone the repository and serve the directory with any static web server, for
+example `python3 -m http.server`. Opening `index.html` straight from the file system does not work,
+because browsers refuse the request that loads the TOS ROM from a `file://` page.
 
 ## Feedback
 
