@@ -188,8 +188,27 @@ fi
 
 # check out the pages branch beside the working copy, so the current checkout
 # is left alone
+# the branch may exist on the remote, only locally (published to another
+# remote), or not at all
 if git rev-parse --verify --quiet "refs/remotes/$remote/$pages_branch" >/dev/null; then
-    git worktree add --quiet --force -B "$pages_branch" "$worktree" "refs/remotes/$remote/$pages_branch"
+    base="refs/remotes/$remote/$pages_branch"
+elif git rev-parse --verify --quiet "refs/heads/$pages_branch" >/dev/null; then
+    echo "$pages_branch is not on $remote, continuing from the local branch"
+    base="refs/heads/$pages_branch"
+else
+    base=""
+fi
+
+# git will not rebuild a branch that is checked out somewhere
+checked_out=$(git worktree list --porcelain | awk -v b="refs/heads/$pages_branch" '
+    /^worktree /{ path=$2 } $0 == "branch " b { print path }')
+if [ -n "$checked_out" ]; then
+    echo "$pages_branch is checked out in $checked_out; switch that worktree to another branch" >&2
+    exit 1
+fi
+
+if [ -n "$base" ]; then
+    git worktree add --quiet --force -B "$pages_branch" "$worktree" "$base"
 else
     echo "creating $pages_branch"
     git worktree add --quiet --force --detach "$worktree"
