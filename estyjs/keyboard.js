@@ -326,8 +326,8 @@ EstyJs.Keyboard = function (opts) {
 
         keyCode = keyCode.scancode;
 
-        //75 = left cursor, 77 = right cursor, 80 = down, 72 = up
-        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80) || keyCode == 0x1D) {
+        //75 = left cursor, 77 = right cursor, 80 = down, 72 = up, 0x1d = control
+        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
             switch (keyCode) {
                 //bit 0 = left, bit 1 = right, bit 2 = up, bit 3 = down, bit 7 = fire                                   
                 case 72:
@@ -386,7 +386,7 @@ EstyJs.Keyboard = function (opts) {
 
         keyCode = keyCode.scancode;
 
-        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80) || keyCode == 0x1D) {
+        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
             switch (keyCode) {
                 //bit 0 = left, bit 1 = right, bit 2 = up, bit 3 = down, bit 7 = fire                                   
                 case 72:

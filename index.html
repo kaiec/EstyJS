@@ -59,6 +59,7 @@
 			<button onclick="colorToggle()" id="btnColor"><span>Screen</span></button>
 			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
 			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
+			<button onclick="joystickToggle()" id="btnJoystick"><span>Joystick off</span></button>
 			<input type="file" id="selectedTOS" accept=".img" style="display: none;">
 		</div>
 		<div id="floppies">
@@ -72,7 +73,6 @@
 		<div id="diskmessage" role="status" aria-live="polite"></div>
 
 		<div id="settings">
-			<input type="checkbox" id="joystick" checked="checked" onclick="changeJoystick()">Joystick
 			<input type="checkbox" id="showpct" onclick="changeShowPct()">Show Speed
 			<input type="checkbox" id="frameskip" onclick="changeFrameskip()">Frameskip
 			<input type="checkbox" id="ram" checked="checked" onclick="changeRamSize()">1Meg
@@ -112,7 +112,9 @@
 			<li>Click a floppy drive to insert a disk image. See below for the formats EstyJS reads.</li>
 			<li>Click the ROM slot to use a different TOS image (.img) instead of the bundled EmuTOS.</li>
 			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
-			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad).</li>
+			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad). The
+				Joystick button turns that off, so that the cursor keys and ctrl reach the ST as
+				keys again.</li>
 		</ul>
 
 		<h2>Disk images</h2>

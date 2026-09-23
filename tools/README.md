@@ -69,6 +69,17 @@ node tools/check-disks.js --check known.json disks/*.st disks/*.msa disks/*.stx
 writes the frames out as raw RGBA next to the hashes, converted the same way as
 the screenshots above.
 
+## Checking the joystick switch
+
+```
+node tools/check-joystick.js "disks/Buggy Boy - Elite.stx"
+```
+
+With the switch on, the cursor keys and control are joystick 1; with it off they
+have to be ordinary keys. Nothing reports that directly, so it is measured
+through a game that only listens to the joystick: two identical machines, one
+key press, and whether the picture ends up different.
+
 ## Checking the file picker
 
 ```

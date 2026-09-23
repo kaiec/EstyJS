@@ -128,6 +128,18 @@ function colorToggle() {
     }
 }
 
+// Cursor keys and control are joystick 1 while this is on, and ordinary keys
+// when it is off. Like the other buttons here, the label says what a click
+// does rather than what the state is.
+var joystickEnabled = true;
+
+function joystickToggle() {
+	joystickEnabled = !joystickEnabled;
+	estyjs.setJoystick(joystickEnabled);
+	document.querySelector("#btnJoystick span").innerHTML =
+		joystickEnabled ? "Joystick off" : "Joystick on";
+}
+
 function soundToggle() {
 	var sound = estyjs.soundToggle();
 	if (sound) {
@@ -146,10 +158,6 @@ function openFileInDrive(fname,drive) {
 	estyjs.openFloppyFile(drive, fname, function (result) {
 		diskLoaded(drive, fname, result);
 	});
-}
-
-function changeJoystick() {
-	estyjs.setJoystick($('#joystick').prop('checked'));
 }
 
 function changeShowPct() {
