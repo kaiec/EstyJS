@@ -240,7 +240,7 @@ function EstyJs(output) {
 					snapshot.loadSnapshot(file);
 					break;
 				}
-				if (ext == '.st') {
+				if (ext == '.st' || ext == '.msa') {
 					fdc.loadFile(drive, file);
 					break;
 				}

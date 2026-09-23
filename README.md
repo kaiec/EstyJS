@@ -15,6 +15,35 @@ EstyJS 2.0 runs here: [https://kaiec.github.io/EstyJS/](https://kaiec.github.io/
 - Design of the new logo.
 - Redesign of the default website.
 
+## Disk images
+
+EstyJS emulates the floppy controller at sector level: a read command is answered from the sector
+data held in the image. That is what decides which formats can be supported. Sector level formats
+store exactly that data and can be read directly. Track and flux level formats describe the magnetic
+layout of the disk, which is how original disks carry their copy protection, and using them would
+mean emulating the WD1772 at track level first.
+
+| Format | What it is | EstyJS |
+| --- | --- | --- |
+| `.st` | Raw dump of all sectors, no header. Written for PaCifiST and now the common exchange format. | **yes** |
+| `.msa` | Magic Shadow Archiver: 10 byte header, then one block per track and side, run length encoded on `$E5`. | **yes** |
+| `.zip` | Archive holding one `.st` or `.msa` image. | **yes** |
+| `.sts` | Steem memory snapshot. Not a disk image, but loaded through the same button. | **load only** |
+| `.dim` | FastCopy Pro: 32 byte header, then sectors. Some images hold only the sectors the FAT marks as used. | no, but could be |
+| `.stt` | Steem track level format (`STEM` magic), sector and raw track data per track. | no |
+| `.stx` | Pasti. Track level, with address marks, timing and weak bits, so protected originals work. | no |
+| `.ipf`, `.ctr` | Software Preservation Society and KryoFlux. Track and flux level, read through the closed source CAPS library. | no |
+| `.scp` | SuperCard Pro flux capture. | no |
+| `.stw` | Steem's own writable track level format. | no |
+| `.hfe` | HxC bitstream image, used by hardware floppy emulators such as the Gotek. | no |
+| `.st.gz`, `.msa.gz` | Gzipped images. | no |
+| `.img`, `.hdv` | ACSI or IDE hard disk images. EstyJS has no hard disk emulation at all. | no |
+
+The geometry of an `.st` image is not stored anywhere in the file: it is worked out from the image
+length together with the sector count in the boot sector, trying 9, 10 and 11 sectors per track.
+Images with an unusual layout and no usable boot sector may therefore be misread. `.msa` carries its
+geometry in the header and does not have that problem.
+
 ## Feedback
 Please use the [issue system](https://github.com/kaiec/EstyJS/issues) to give feedback, report bugs or suggest ideas for further improvements.
 

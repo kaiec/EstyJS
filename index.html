@@ -97,17 +97,48 @@
 			Notable limitations:
 		</p>
 		<ul>
-			<li>No writing to floppies.</li>
+			<li>Sector level disk images only (.st, .msa). Copy protected originals, which need
+				track level images such as .stx or .ipf, do not run.</li>
+			<li>No writing to floppies. Disks are reported to TOS as write protected.</li>
 			<li>Only partial support of keyboard/mouse/joystick.</li>
 			<li>Timer pulse width & high accuracy &lt; 1 scanline is not supported.</li>
 			<li>No border effects (as used by some demos), only the official resolutions are supported.</li>
 		</ul>
 		<h2>Usage</h2>
 		<ul>
-			<li>Click the floppy drives to load a floppy image (.st or .sts files are supported)</li>
+			<li>Click a floppy drive to insert a disk image. See below for the formats EstyJS reads.</li>
+			<li>Click the ROM slot to use a different TOS image (.img) instead of the bundled EmuTOS.</li>
 			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
 			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad).</li>
 		</ul>
+
+		<h2>Disk images</h2>
+		<p>
+			Atari ST disks have been imaged in a number of formats over the years, and they fall into
+			two groups. <em>Sector level</em> formats store the data a normal disk holds.
+			<em>Track level</em> formats store the magnetic layout of the disk itself, which is what
+			it takes to preserve the copy protection of original game disks. EstyJS reads the sector
+			level formats:
+		</p>
+		<ul>
+			<li><strong>.st</strong> &ndash; a raw dump of every sector, with no header. The most
+				common format, and the one to convert to if in doubt.</li>
+			<li><strong>.msa</strong> &ndash; Magic Shadow Archiver: a header plus one run length
+				encoded block per track. Single and double sided images both work.</li>
+			<li><strong>.zip</strong> &ndash; an archive containing one .st or .msa image.</li>
+			<li><strong>.sts</strong> &ndash; not a disk image at all, but a Steem memory snapshot.
+				It restores a whole machine state and is loaded through the same button.</li>
+		</ul>
+		<p>
+			Everything else is not supported. <strong>.dim</strong> (FastCopy Pro) is sector level
+			and could be added, but is not read yet. The track and flux level formats &ndash;
+			<strong>.stx</strong> (Pasti), <strong>.ipf</strong> and <strong>.ctr</strong> (Software
+			Preservation Society, KryoFlux), <strong>.stt</strong> and <strong>.stw</strong> (Steem),
+			<strong>.scp</strong> (SuperCard Pro), <strong>.hfe</strong> (HxC) &ndash; would need an
+			FDC emulation that models whole tracks instead of sectors, which EstyJS does not have.
+			Gzipped images (.st.gz, .msa.gz) are not unpacked, and there is no hard disk emulation of
+			any kind, so ACSI and IDE images cannot be used either.
+		</p>
 
 
 
