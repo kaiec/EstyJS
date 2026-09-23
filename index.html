@@ -9,6 +9,7 @@
 	<title>EstyJs</title>
 	<link rel="stylesheet" type="text/css" href="css/estyjs2.css">
 	<script src="esty2-gui.js"></script>
+	<script src="esty2-keyboard.js"></script>
 
 	<script src="estyjs/estyjs.js"></script>
 	<script src="estyjs/disk.js"></script>
@@ -34,10 +35,12 @@
 			document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
 			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
 			document.getElementById('selectedTOS').addEventListener('change', tosSelected, false);
+			EstyKeyboard.create('keyboardpanelbody');
 			splashScreen('img/logo.png', function(){
 				estyjs = EstyJs("EstyJsOutput");
 				estyjs.setRowSkip(false);
 				estyjs.setMonoMonitor(false);
+				EstyKeyboard.listen();
 			});
 		});
 	</script>
@@ -71,6 +74,11 @@
 		</div>
 
 		<div id="diskmessage" role="status" aria-live="polite"></div>
+
+		<details id="keyboardpanel">
+			<summary>ST keyboard &mdash; see where your keys land, or click to type</summary>
+			<div id="keyboardpanelbody"></div>
+		</details>
 
 		<div id="settings">
 			<input type="checkbox" id="showpct" onclick="changeShowPct()">Show Speed
@@ -137,6 +145,13 @@
 			Note that the ST's operating system here uses a US keyboard table, so the letter the ST
 			receives is the one at that position on a US keyboard. That is what games expect, since
 			they read the key position rather than the character.
+		</p>
+		<p>
+			The <strong>ST keyboard</strong> panel above the machine description shows all of this
+			directly: press a key and the ST key it arrives as lights up, click a key and it is sent
+			to the ST. Clicking is the only way to reach the keypad's brackets, which a PC keyboard
+			does not have. The keycaps can be switched between the US, UK, German and French ST
+			keyboards; that changes what is printed on the keys, not what the ST types.
 		</p>
 
 		<h2>Disk images</h2>

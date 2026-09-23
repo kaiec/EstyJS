@@ -82,6 +82,18 @@ reachable, that keys the ST does not have send nothing, and that browser
 auto-repeat does not turn into a stream of make codes. `--list` prints the
 mapping table.
 
+## Checking the on screen keyboard
+
+```
+node tools/check-onscreen-keyboard.js [--list]
+```
+
+The panel in the page is a picture of a real ST keyboard, so what can quietly
+go wrong is structural: a key listed twice, a row that no longer lines up with
+the others, a missing ST key, a country missing its keycaps. All of that is in
+the source, so it is checked there rather than by driving a browser. `--list`
+prints the keycaps of all four countries side by side.
+
 ## Checking the joystick switch
 
 ```

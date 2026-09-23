@@ -254,6 +254,20 @@ function EstyJs(output) {
 		fileManager.getZipFilenames(file, zipCallback);
 	}
 
+	// The on screen keyboard: watch what the host keyboard sends, and send ST
+	// keys that no host key is mapped to.
+	self.setKeyListener = function (listener) {
+		keyboard.onKey = listener;
+	}
+
+	self.pressKey = function (scancode) {
+		keyboard.pressKey(scancode);
+	}
+
+	self.releaseKey = function (scancode) {
+		keyboard.releaseKey(scancode);
+	}
+
 	self.setJoystick = function (joyEnabled) {
 		keyboard.KeypadJoystick = joyEnabled;
 	}

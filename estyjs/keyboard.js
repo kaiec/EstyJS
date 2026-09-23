@@ -321,6 +321,8 @@ EstyJs.Keyboard = function (opts) {
         var keyCode = stScancodes[physicalKey];
         if (keyCode == null) return;
 
+        if (self.onKey) self.onKey(keyCode, true, physicalKey);
+
         if (resetTime > 0) return;
 
         //75 = left cursor, 77 = right cursor, 80 = down, 72 = up, 0x1d = control
@@ -379,6 +381,8 @@ EstyJs.Keyboard = function (opts) {
         var keyCode = stScancodes[physicalKey];
         if (keyCode == null) return;
 
+        if (self.onKey) self.onKey(keyCode, false, physicalKey);
+
         if (resetTime > 0) return;
 
         if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
@@ -432,6 +436,20 @@ EstyJs.Keyboard = function (opts) {
     function keyPress(evt) {
         if (self.active && !evt.metaKey) return false;
     }
+
+    // An ST key pressed directly, with no host key involved: this is how the on
+    // screen keyboard reaches keys a PC keyboard does not have.
+    self.pressKey = function (scancode) {
+        if (scancode) dataOut.push(scancode & 0x7f);
+    }
+
+    self.releaseKey = function (scancode) {
+        if (scancode) dataOut.push(0x80 | (scancode & 0x7f));
+    }
+
+    // Called for every key the host sends, so that something watching can show
+    // where it landed on the ST keyboard.
+    self.onKey = null;
 
     self.checkJoystick = function () {
         var newJoystickPos = 0;

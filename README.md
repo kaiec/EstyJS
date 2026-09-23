@@ -91,8 +91,19 @@ Keys the ST has and a PC does not:
 
 Cursor keys and control are joystick 1 unless the Joystick button is switched off.
 
-`node tools/check-keymap.js` checks that every one of these reaches the ST as the right scancode,
-and `--list` prints the table.
+The page draws an ST keyboard under the machine: press a key and the ST key it arrives as lights up,
+click a key and it is sent to the ST. Clicking is the only way to reach the keypad's `(` and `)`,
+which a PC keyboard has no equivalent for. The keycaps switch between the US, UK, German and French
+ST keyboards - that changes the legends, not what the ST types, which follows the keyboard table in
+the TOS image (US for the EmuTOS built in here).
+
+The legends come from EmuTOS's own country tables (`bios/keyb_<country>.h`), and the key positions
+are those of a real ST: a US ST has no key between the left shift and Z, where every European model
+has one, so the panel grows and shrinks the shift key with the country.
+
+`node tools/check-keymap.js` checks that every physical key reaches the ST as the right scancode and
+`--list` prints the table; `node tools/check-onscreen-keyboard.js` checks the panel's layout and
+keycaps.
 
 <details>
 <summary>The full mapping, all 97 physical keys</summary>

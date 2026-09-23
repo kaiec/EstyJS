@@ -132,3 +132,114 @@ canvas
 #diskmessage.problem {
 	color: #a02000;
 }
+
+/* ---- the ST keyboard drawn in the page ---- */
+
+#keyboardpanel {
+	margin: 0px 0px 20px 60px;
+	width: 940px;
+}
+
+#keyboardpanel > summary {
+	cursor: pointer;
+	font-size: 18px;
+	padding: 4px 0px;
+	color: #333333;
+	width: max-content;
+}
+
+#keyboardpanel > summary:hover {
+	color: #000000;
+}
+
+.kb-countries {
+	margin: 10px 0px;
+	font-size: 16px;
+	color: #333333;
+}
+
+button.kb-country {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 16px;
+	background-color: #cccccc;
+	border: 2px outset #bbbbbb;
+	color: #333333;
+	padding: 2px 10px;
+	margin-right: 4px;
+	cursor: pointer;
+}
+
+button.kb-country.chosen {
+	background-color: #888888;
+	border-style: inset;
+	color: #ffffff;
+}
+
+.kb-keyboard {
+	--kb-qu: 9px;           /* a quarter of a key */
+	--kb-row: 36px;
+	display: flex;
+	align-items: flex-start;
+	gap: 18px;
+	background-color: #b8b8b4;
+	border: 2px solid #9a9a96;
+	padding: 10px;
+	width: max-content;
+}
+
+.kb-block {
+	display: grid;
+	grid-auto-rows: var(--kb-row);
+}
+
+button.kb-key {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 13px;
+	line-height: 1.05;
+	background-color: #e8e8e4;
+	border: 1px solid #a0a09c;
+	border-bottom-width: 3px;
+	border-radius: 3px;
+	color: #222222;
+	padding: 2px 3px;
+	margin: 1px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: flex-start;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+	touch-action: none;
+}
+
+button.kb-key .shifted {
+	font-size: 11px;
+	color: #666666;
+}
+
+button.kb-key .named {
+	font-size: 11px;
+	color: #444444;
+}
+
+button.kb-key.down {
+	background-color: #f5a623;
+	border-color: #b8791a;
+	border-bottom-width: 1px;
+	margin-top: 2px;
+	color: #000000;
+}
+
+button.kb-key.down .shifted, button.kb-key.down .named {
+	color: #000000;
+}
+
+.kb-status {
+	margin-top: 10px;
+	font-size: 16px;
+	color: #333333;
+	min-height: 22px;
+}
