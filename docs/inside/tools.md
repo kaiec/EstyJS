@@ -11,7 +11,7 @@ The other tools are built on it.
 ## Publishing
 
     tools/publish-pages.sh [--remote NAME] [--branch NAME] [--root REF] [--skip PATTERN]
-                           [--no-push] [--dry-run]
+                           [--nojekyll] [--no-push] [--dry-run]
 
 Publishes the root ref at the root of the `pages` branch and every other branch and tag in a
 subdirectory of the same name, then commits and pushes. The branch is rebuilt from the refs on each
@@ -21,7 +21,9 @@ five versions of EstyJS costs about 12 KiB.
 Forgejo releases are their tags, which are published. Release assets are not.
 
 git-pages does not poll, so the push has to reach it through a webhook or the git-pages Forgejo
-action.
+action. GitHub Pages rebuilds on push, but runs the branch through Jekyll, which drops folders
+called `vendor` or `node_modules` and anything starting with `_` or `.`. Publishing there needs
+`--nojekyll`.
 
 ## Checks
 

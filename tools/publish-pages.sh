@@ -24,8 +24,14 @@
 #   --branch NAME     branch to publish into (default pages)
 #   --root REF        ref served at the root (default main)
 #   --skip PATTERN    skip refs matching this shell pattern, repeatable
+#   --nojekyll        add .nojekyll, needed on GitHub Pages
 #   --no-push         commit but do not push
 #   --dry-run         show what would be published, change nothing
+#
+# GitHub Pages runs the published branch through Jekyll, which drops folders
+# called vendor and node_modules and anything starting with _ or . . Publishing
+# there needs --nojekyll, or vendor/marked.min.js goes missing and the
+# documentation viewer stops working.
 #
 set -euo pipefail
 
@@ -34,6 +40,7 @@ pages_branch=pages
 root_ref=main
 push=yes
 dry=no
+nojekyll=no
 skips=()
 
 while [ $# -gt 0 ]; do
@@ -42,9 +49,10 @@ while [ $# -gt 0 ]; do
         --branch) pages_branch=$2; shift 2 ;;
         --root)   root_ref=$2; shift 2 ;;
         --skip)   skips+=("$2"); shift 2 ;;
+        --nojekyll) nojekyll=yes; shift ;;
         --no-push) push=no; shift ;;
         --dry-run) dry=yes; push=no; shift ;;
-        -h|--help) sed -n '2,32p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,38p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "unknown option $1" >&2; exit 1 ;;
     esac
 done
@@ -107,6 +115,10 @@ for entry in ${refs+"${refs[@]}"}; do
     mkdir -p "$build/$dir"
     git archive "$ref" | tar -x -C "$build/$dir"
 done
+
+if [ "$nojekyll" = yes ]; then
+    touch "$build/.nojekyll"
+fi
 
 # check out the pages branch beside the working copy, so the current checkout
 # is left alone
