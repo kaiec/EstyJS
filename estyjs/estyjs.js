@@ -254,6 +254,16 @@ function EstyJs(output) {
 		fileManager.getZipFilenames(file, zipCallback);
 	}
 
+	// The country of the loaded TOS, so that the on screen keyboard can show the
+	// keycaps that go with it.
+	self.getTosCountry = function () {
+		return memory.getTosCountry();
+	}
+
+	self.setTosListener = function (listener) {
+		memory.onTos = listener;
+	}
+
 	// For the on screen keyboard.
 	self.setKeyListener = function (listener) {
 		keyboard.onKey = listener;

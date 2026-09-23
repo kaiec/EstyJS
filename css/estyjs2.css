@@ -211,6 +211,7 @@ button.kb-country.chosen {
 }
 
 button.kb-key {
+	position: relative;
 	font-family: 'nostalgie';
 	font-weight: 800;
 	font-size: 13px;
@@ -236,6 +237,21 @@ button.kb-key {
 button.kb-key .shifted {
 	font-size: 11px;
 	color: #5c5c55;
+}
+
+button.kb-key .alt {
+	position: absolute;
+	top: 2px;
+	right: 3px;
+	font-size: 8px;
+	line-height: 1.15;
+	text-align: right;
+	white-space: pre;
+	color: #6b6b64;
+}
+
+button.kb-key.down .alt {
+	color: #cfdcf0;
 }
 
 button.kb-key .named {
