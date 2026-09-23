@@ -88,127 +88,43 @@
 	</div>
 
 	<div id="content">
-		<h2>Atari ST</h2>
+		<h2>EstyJS 2.0</h2>
 		<p>
 			<img src="img/Atari_1040STf-600.png" style="float:right;" alt="Photo of an Atari ST">
-			The Atari ST was a 16 bit home computer that was very popular in the late 80's and early 90's.
-			It was the direct competitor of the Commodore Amiga and both machines were based upon the 68000 CPU.
-			It was first released in 1985 and was very sucessful in the professional music industry due to having MIDI
-			ports as standard.
-		</p>
-		<h2>EstyJS 2.0</h2>
-		<p>EstyJS is an emulator for the Atari ST, written in 100% pure JavaScript, originally developed by Darren
-			Coles. Since 2024 and the release of EstyJS 2.0,
-			the project is maintained by Kai Eckert. The source code is available on <a
-				href="https://github.com/kaiec/EstyJS">GitHub</a>. Please use GitHub issues for feedback, bugs and
-			ideas.
+			EstyJS is an emulator for the Atari ST, written in 100% pure JavaScript, originally
+			developed by Darren Coles. Since 2024 and the release of EstyJS 2.0, the project is
+			maintained by Kai Eckert. The source code is available on
+			<a href="https://github.com/kaiec/EstyJS">GitHub</a>. Please use GitHub issues for
+			feedback, bugs and ideas.
 		</p>
 		<p>
-			EstyJS is not a full emulation and focuses on running games or old software for demonstration purposes.
-			Notable limitations:
+			EstyJS is not a full emulation and focuses on running games or old software for
+			demonstration purposes. It is honest about where it stops: see
+			<a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/limitations.md">limitations</a>.
 		</p>
-		<ul>
-			<li>Copy protection that relies on disk rotation or timing is not emulated, so some
-				original disks still refuse to run.</li>
-			<li>No writing to floppies. Disks are reported to TOS as write protected.</li>
-			<li>Joystick port 0 is not emulated, so two player games do not work. A connected
-				gamepad takes over from the cursor keys.</li>
-			<li>Timer pulse width & high accuracy &lt; 1 scanline is not supported.</li>
-			<li>No border effects (as used by some demos), only the official resolutions are supported.</li>
-		</ul>
+
 		<h2>Usage</h2>
 		<ul>
-			<li>Click a floppy drive to insert a disk image. See below for the formats EstyJS reads.</li>
+			<li>Click a floppy drive to insert a disk image. It reads .st, .msa, .stx and .zip, and
+				says so when it cannot read a file &mdash; the
+				<a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/disks.md">disk images</a> page has the details.</li>
 			<li>Click the ROM slot to use a different TOS image (.img) instead of the bundled EmuTOS.</li>
 			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
 			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad). The
 				Joystick button turns that off, so that the cursor keys and ctrl reach the ST as
 				keys again.</li>
+			<li>Keys are taken by position, so the host keyboard layout makes no difference. Open the
+				<strong>ST keyboard</strong> panel to see where each key lands, or to click keys a PC
+				keyboard does not have.</li>
 		</ul>
 
-		<h2>Keyboard</h2>
-		<p>
-			Keys are taken by position, not by the character printed on them, so the keyboard layout
-			of the host makes no difference: the key where a US keyboard has <strong>Y</strong> is the
-			ST's <strong>Y</strong> key, whatever a German or French keyboard calls it. Everything
-			sits where it looks, apart from the keys the ST has and a PC does not:
-		</p>
+		<h2>Documentation</h2>
 		<ul>
-			<li><strong>Undo</strong> is Page Up, <strong>Help</strong> is Page Down.</li>
-			<li>The <strong>ISO key</strong> (<em>&lt; &gt;</em> on a European ST) is the key beside
-				the left shift key.</li>
-			<li>The keypad's <strong>(</strong> and <strong>)</strong> are Num Lock and Scroll
-				Lock.</li>
-			<li>Cursor keys and ctrl are joystick 1 until the Joystick button is switched off.</li>
-		</ul>
-		<p>
-			Note that the ST's operating system here uses a US keyboard table, so the letter the ST
-			receives is the one at that position on a US keyboard. That is what games expect, since
-			they read the key position rather than the character.
-		</p>
-		<p>
-			The <strong>ST keyboard</strong> panel above the machine description shows all of this
-			directly: press a key and the ST key it arrives as lights up, click a key and it is sent
-			to the ST. Clicking is the only way to reach the keypad's brackets, which a PC keyboard
-			does not have. The keycaps can be switched between the US, UK, German and French ST
-			keyboards; that changes what is printed on the keys, not what the ST types.
-		</p>
-
-		<h2>Disk images</h2>
-		<p>
-			Atari ST disks have been imaged in a number of formats over the years, and they fall into
-			two groups. <em>Sector level</em> formats store the data a normal disk holds.
-			<em>Track level</em> formats store the magnetic layout of the disk itself, which is what
-			it takes to preserve the copy protection of original game disks. EstyJS reads:
-		</p>
-		<ul>
-			<li><strong>.st</strong> &ndash; a raw dump of every sector, with no header. The most
-				common format, and the one to convert to if in doubt.</li>
-			<li><strong>.msa</strong> &ndash; Magic Shadow Archiver: a header plus one run length
-				encoded block per track. Single and double sided images both work.</li>
-			<li><strong>.stx</strong> &ndash; Pasti, the format used to preserve original disks. The
-				address field of every sector is read from the image and matched the way the disk
-				controller matches it, so disks that number their sectors unusually, mark a sector as
-				damaged, or leave bytes deliberately unstable behave as they did on the real machine.
-				Whole track reads are answered from the image as well, which is what a number of
-				protected originals check.</li>
-			<li><strong>.zip</strong> &ndash; an archive containing one .st, .msa or .stx image.</li>
-			<li><strong>.sts</strong> &ndash; not a disk image at all, but a Steem memory snapshot.
-				It restores a whole machine state and is loaded through the same button.</li>
-		</ul>
-		<p>
-			What .stx support does not cover is time. The disk does not rotate: there is no index
-			pulse, sectors are found immediately rather than when they come round, and the read time
-			recorded for each sector is ignored. Protections that measure how long a read takes, or
-			where on the track the head is, therefore still fail. Writing to a .stx image and
-			formatting are not supported either.
-		</p>
-		<p>
-			Everything else is not read at all. <strong>.dim</strong> (FastCopy Pro) is sector level
-			and could be added. <strong>.ipf</strong> and <strong>.ctr</strong> (Software Preservation
-			Society, KryoFlux) need the closed source CAPS library; <strong>.stt</strong> and
-			<strong>.stw</strong> (Steem), <strong>.scp</strong> (SuperCard Pro) and
-			<strong>.hfe</strong> (HxC) are formats for other emulators and for floppy emulator
-			hardware. Gzipped images (.st.gz, .msa.gz) are not unpacked, and there is no hard disk
-			emulation of any kind, so ACSI and IDE images cannot be used either.
-		</p>
-
-
-
-		<h2>Credits</h2>
-		<ul>
-			<li>EstyJS 2.0 since 2024 by <a href="https://github.com/kaiec/EstyJS">Kai Eckert</a>.</li>
-			<li>EstyJS 1.0 (2013 - 2024) by <a href="https://github.com/dmcoles/EstyJs">Darren Coles</a>.</li>
-			<li><a href="https://emutos.sourceforge.io/">EmuTOS</a> is the open source implementation of the original
-				Atari TOS operating system and used by default in EstyJS (but the original TOS works, too!).</li>
-			<li>68000 emulation core - Rupert Hausberger (adapted from <a
-					href="http://scriptedamigaemulator.net/">SAE</a> by Darren Coles).</li>
-			<li>YM2149 sound chip emulation - <a href="https://github.com/ponceto/aym-js">AYM&middot;JS</a>
-				by Olivier Poncet.</li>
-			<li>Atari ST image from Wikipedia by <a href="http://en.wikipedia.org/wiki/File:Atari_1040STf.jpg">Bill
-					Bertram.</a></li>
-			<li>The font used on this page is <a href="https://github.com/sporniket/Sporniket-Nostalgie-Sans">Sporniket
-					Nostalgie v2</a>, inspired by the Atari ST system font.</li>
+			<li><a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/disks.md">Disk images</a> &mdash; the formats it reads, and the ones it does not</li>
+			<li><a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/keyboard.md">Keyboard</a> &mdash; how a host keyboard maps onto the ST's, and the full table</li>
+			<li><a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/joystick.md">Joystick</a> &mdash; cursor keys, gamepads, and the switch between them</li>
+			<li><a href="https://github.com/kaiec/EstyJS/blob/main/docs/using/limitations.md">Limitations</a> &mdash; what is not emulated</li>
+			<li><a href="https://github.com/kaiec/EstyJS/blob/main/docs/credits.md">Credits and license</a></li>
 		</ul>
 	</div>
 
