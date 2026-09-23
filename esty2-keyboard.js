@@ -114,6 +114,7 @@ var EstyKeyboard = (function () {
         var legend = legendFor(scancode);
 
         element.innerHTML = '';
+        element.classList.toggle('two', !!legend[1]);
         if (legend[1]) {
             var shifted = document.createElement('span');
             shifted.className = 'shifted';
@@ -174,11 +175,19 @@ var EstyKeyboard = (function () {
 
     /* ---------------------------------------------------------- the keys */
 
+    // window.estyjs is the emulator once the page has built it. The page also
+    // has a div with that id, which the browser exposes under the same name, so
+    // the methods are what is checked for.
+    function emulator() {
+        return (window.estyjs && typeof window.estyjs.pressKey === 'function') ? window.estyjs : null;
+    }
+
     function press(scancode) {
         if (held[scancode]) return;
         held[scancode] = true;
         show(scancode, true);
-        if (window.estyjs) estyjs.pressKey(scancode);
+        var esty = emulator();
+        if (esty) esty.pressKey(scancode);
         report(null, scancode, true);
     }
 
@@ -186,7 +195,8 @@ var EstyKeyboard = (function () {
         if (!held[scancode]) return;
         delete held[scancode];
         show(scancode, false);
-        if (window.estyjs) estyjs.releaseKey(scancode);
+        var esty = emulator();
+        if (esty) esty.releaseKey(scancode);
     }
 
     function releaseAll() {
@@ -270,19 +280,18 @@ var EstyKeyboard = (function () {
         document.addEventListener('pointercancel', releaseAll);
         window.addEventListener('blur', releaseAll);
 
-        //follow the host keyboard
-        if (window.estyjs) estyjs.setKeyListener(function (scancode, down, physicalKey) {
-            show(scancode, down);
-            report(physicalKey, scancode, down);
-        });
+        self.listen();
     };
 
     // The emulator is built after the page loads.
     self.listen = function () {
-        if (window.estyjs && root) estyjs.setKeyListener(function (scancode, down, physicalKey) {
-            show(scancode, down);
-            report(physicalKey, scancode, down);
-        });
+        var esty = emulator();
+        if (esty && root && typeof esty.setKeyListener === 'function') {
+            esty.setKeyListener(function (scancode, down, physicalKey) {
+                show(scancode, down);
+                report(physicalKey, scancode, down);
+            });
+        }
     };
 
     return self;
