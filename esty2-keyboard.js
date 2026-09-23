@@ -61,9 +61,8 @@ var EstyKeyboard = (function () {
     // The three blocks, in quarter key widths. r: 2 is a tall key (Return,
     // keypad Enter).
     var MAIN = [
-        [{ pad: 4 }, { s: 0x3B, w: 6 }, { s: 0x3C, w: 6 }, { s: 0x3D, w: 6 }, { s: 0x3E, w: 6 },
-         { s: 0x3F, w: 6 }, { s: 0x40, w: 6 }, { s: 0x41, w: 6 }, { s: 0x42, w: 6 },
-         { s: 0x43, w: 6 }, { s: 0x44, w: 6 }],
+        { flex: true, keys: [{ s: 0x3B }, { s: 0x3C }, { s: 0x3D }, { s: 0x3E }, { s: 0x3F },
+                             { s: 0x40 }, { s: 0x41 }, { s: 0x42 }, { s: 0x43 }, { s: 0x44 }] },
         [{ s: 0x01 }, { s: 0x02 }, { s: 0x03 }, { s: 0x04 }, { s: 0x05 }, { s: 0x06 }, { s: 0x07 },
          { s: 0x08 }, { s: 0x09 }, { s: 0x0A }, { s: 0x0B }, { s: 0x0C }, { s: 0x0D }, { s: 0x29 },
          { s: 0x0E, w: 8 }],
@@ -107,7 +106,13 @@ var EstyKeyboard = (function () {
         var legend = LEGENDS[country][scancode];
         if (!legend) return ['', ''];
 
-        return [legend[0] || '', legend[1] || ''];
+        var plain = legend[0] || '';
+        var shifted = legend[1] || '';
+
+        //letters carry their upper case only, as the keycaps do
+        if (shifted && plain && shifted === plain.toUpperCase()) return [shifted, ''];
+
+        return [plain, shifted];
     }
 
     function label(element, scancode) {
@@ -122,7 +127,8 @@ var EstyKeyboard = (function () {
             element.appendChild(shifted);
         }
         var plain = document.createElement('span');
-        plain.className = NAMES[scancode] !== undefined ? 'named' : 'plain';
+        //a word is set small, a single glyph such as an arrow is not
+        plain.className = legend[0].length > 1 ? 'named' : 'plain';
         plain.textContent = legend[0];
         element.appendChild(plain);
 
@@ -137,22 +143,37 @@ var EstyKeyboard = (function () {
         for (var r = 0; r < rows.length; r++) {
             var column = 1;
 
-            for (var i = 0; i < rows[r].length; i++) {
-                var key = rows[r][i];
+            //a flex row fills the block, whatever the column count is
+            var flexRow = null;
+            if (rows[r].flex) {
+                flexRow = document.createElement('div');
+                flexRow.className = 'kb-fnrow';
+                flexRow.style.gridRow = (firstRow + r);
+                flexRow.style.gridColumn = '1 / -1';
+                grid.appendChild(flexRow);
+            }
+
+            var keys = flexRow ? rows[r].keys : rows[r];
+
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
                 var width = key.w || 4;
 
                 if (key.pad || key.skip) { column += (key.pad || key.skip); continue; }
 
                 var element = document.createElement('button');
                 element.type = 'button';
-                element.className = 'kb-key' + (key.cont ? ' kb-cont' : '') +
-                                    (key.blank ? ' kb-blank kb-joined' : '');
-                element.style.gridColumn = column + ' / span ' + width;
-                element.style.gridRow = (firstRow + r) + ' / span ' + (key.r || 1);
+                if (flexRow) { element.className = 'kb-key kb-fn'; }
+                else {
+                    element.className = 'kb-key' + (key.cont ? ' kb-cont' : '') +
+                                        (key.blank ? ' kb-blank kb-joined' : '');
+                    element.style.gridColumn = column + ' / span ' + width;
+                    element.style.gridRow = (firstRow + r) + ' / span ' + (key.r || 1);
+                }
                 element.dataset.scancode = key.s;
                 label(element, key.s);
 
-                grid.appendChild(element);
+                (flexRow || grid).appendChild(element);
                 (keyElements[key.s] = keyElements[key.s] || []).push(element);
                 column += width;
             }
@@ -257,6 +278,16 @@ var EstyKeyboard = (function () {
 
         var keyboard = document.createElement('div');
         keyboard.className = 'kb-keyboard';
+
+        //where the machine carries its own badge
+        var badge = document.createElement('div');
+        badge.className = 'kb-badge';
+        var mark = document.createElement('img');
+        mark.src = 'img/logo.png';
+        mark.alt = 'EstyJS';
+        badge.appendChild(mark);
+        keyboard.appendChild(badge);
+
         keyboard.appendChild(block(MAIN, 64, 1));
         keyboard.appendChild(block(MIDDLE, 12, 2));
         keyboard.appendChild(block(KEYPAD, 16, 2));

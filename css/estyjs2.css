@@ -164,36 +164,40 @@ canvas
 button.kb-country {
 	font-family: 'nostalgie';
 	font-weight: 800;
-	font-size: 15px;
-	background-color: #aaa9aa;
-	border: 3px groove #000000;
-	color: #ffffff;
-	padding: 2px 12px 3px 18px;
-	margin-right: 2px;
+	font-size: 11px;
+	background: linear-gradient(#eeeeee, #d4d4d2);
+	border: 1px solid #8f9082;
+	border-bottom: 3px solid #83847a;
+	border-radius: 2px;
+	color: #3c3c38;
+	width: 44px;
+	height: 30px;
+	padding: 3px 4px;
+	margin-right: 3px;
+	text-align: left;
+	vertical-align: top;
 	cursor: pointer;
-	transform: skew(-40deg);
-	box-shadow: 3px 3px 4px rgba(0,0,0,.6);
-}
-
-button.kb-country span, button.kb-country {
-	display: inline-block;
+	box-shadow: 0px 1px 1px rgba(0,0,0,.25);
 }
 
 button.kb-country.chosen {
-	background-color: #6f6e6f;
-	box-shadow: none;
-	position: relative;
-	bottom: -2px;
+	background: linear-gradient(#1f6ac4, #1658ad);
+	border-color: #0e3c7a;
+	border-bottom-width: 1px;
+	color: #ffffff;
+	box-shadow: inset 0px 1px 3px rgba(0,0,0,.4);
 }
 
 /* the case, with the keys sunk into it */
 .kb-keyboard {
 	--kb-qu: 9px;
 	--kb-row: 36px;
+	--kb-fn-row: 50px;
 	display: flex;
 	align-items: flex-start;
-	gap: 16px;
-	background: linear-gradient(#b3b3a9, #9c9c93);
+	gap: 10px;
+	position: relative;
+	background: linear-gradient(#abaaaa, #ababab);
 	border: 3px groove #8a8a82;
 	padding: 14px 16px 18px;
 	width: max-content;
@@ -203,6 +207,7 @@ button.kb-country.chosen {
 .kb-block {
 	display: grid;
 	grid-auto-rows: var(--kb-row);
+	grid-template-rows: var(--kb-fn-row) repeat(5, var(--kb-row));
 }
 
 button.kb-key {
@@ -210,7 +215,7 @@ button.kb-key {
 	font-weight: 800;
 	font-size: 13px;
 	line-height: 1.05;
-	background: linear-gradient(#eceddf, #d8dac6);
+	background: linear-gradient(#eeeeee, #d4d4d2);
 	border: 1px solid #8f9082;
 	border-bottom: 3px solid #83847a;
 	border-radius: 2px;
@@ -219,19 +224,13 @@ button.kb-key {
 	margin: 1px;
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
-	align-items: center;
+	justify-content: flex-start;
+	align-items: flex-start;
 	overflow: hidden;
 	cursor: pointer;
 	user-select: none;
 	touch-action: none;
 	box-shadow: 0px 1px 1px rgba(0,0,0,.25);
-}
-
-/* keys carrying two legends have them stacked at the left, as on the machine */
-button.kb-key.two {
-	justify-content: flex-end;
-	align-items: flex-start;
 }
 
 button.kb-key .shifted {
@@ -240,46 +239,107 @@ button.kb-key .shifted {
 }
 
 button.kb-key .named {
-	font-size: 10px;
+	font-size: 9px;
 	color: #4a4a45;
 	align-self: flex-start;
 }
 
-/* the function keys are parallelograms on the ST, like the buttons above */
-.kb-block:first-child > button.kb-key[data-scancode="59"],
-.kb-block:first-child > button.kb-key[data-scancode="60"],
-.kb-block:first-child > button.kb-key[data-scancode="61"],
-.kb-block:first-child > button.kb-key[data-scancode="62"],
-.kb-block:first-child > button.kb-key[data-scancode="63"],
-.kb-block:first-child > button.kb-key[data-scancode="64"],
-.kb-block:first-child > button.kb-key[data-scancode="65"],
-.kb-block:first-child > button.kb-key[data-scancode="66"],
-.kb-block:first-child > button.kb-key[data-scancode="67"],
-.kb-block:first-child > button.kb-key[data-scancode="68"] {
-	transform: skew(-18deg);
-	align-items: flex-start;
-	justify-content: flex-start;
+/* The function keys are parallelograms cut into the case. The shape is drawn
+   behind the label, so that the label stays upright and is not clipped by the
+   skew, which Firefox and Chrome disagree about.
+
+   The row fills the block and is shifted right by half the lean, so that the
+   lower left corner of F1 meets the left edge of Esc and the lower right corner
+   of F10 meets the right edge of Backspace. */
+.kb-fnrow {
+	display: flex;
+	gap: 2px;
+	margin: 0px 0px 10px 0px;
+	transform: translateX(14.8px);
 }
 
-.kb-block:first-child > button.kb-key[data-scancode="59"] span,
-.kb-block:first-child > button.kb-key[data-scancode="60"] span,
-.kb-block:first-child > button.kb-key[data-scancode="61"] span,
-.kb-block:first-child > button.kb-key[data-scancode="62"] span,
-.kb-block:first-child > button.kb-key[data-scancode="63"] span,
-.kb-block:first-child > button.kb-key[data-scancode="64"] span,
-.kb-block:first-child > button.kb-key[data-scancode="65"] span,
-.kb-block:first-child > button.kb-key[data-scancode="66"] span,
-.kb-block:first-child > button.kb-key[data-scancode="67"] span,
-.kb-block:first-child > button.kb-key[data-scancode="68"] span {
-	transform: skew(18deg);
+.kb-fnrow > button.kb-key {
+	flex: 1 1 0;
+	min-width: 0;
 }
 
-/* Return is two cells that meet, so that its shape is the machine's */
+button.kb-key.kb-fn {
+	position: relative;
+	background: none;
+	border: 0;
+	box-shadow: none;
+	overflow: visible;
+	padding: 3px 4px 0px 15px;
+}
+
+button.kb-key.kb-fn::before {
+	content: "";
+	position: absolute;
+	inset: 0px;
+	transform: skew(-38deg);
+	border: 1px solid #5f5f5a;
+	border-bottom: 2px solid #4c4c48;
+	border-radius: 2px;
+	background: linear-gradient(rgb(176, 175, 176), rgb(170, 169, 169));
+}
+
+button.kb-key.kb-fn > span {
+	position: relative;
+	color: #ffffff;
+	font-size: 10px;
+}
+
+button.kb-key.kb-fn.down::before {
+	background: linear-gradient(#1f6ac4, #1658ad);
+	border-color: #0e3c7a;
+}
+
+/* the keypad is set smaller, the cursor keys larger */
+.kb-block:nth-child(3) button.kb-key .plain {
+	font-size: 11px;
+}
+
+button.kb-key[data-scancode="72"] .plain,
+button.kb-key[data-scancode="75"] .plain,
+button.kb-key[data-scancode="77"] .plain,
+button.kb-key[data-scancode="80"] .plain {
+	font-size: 15px;
+	font-weight: 900;
+	line-height: 1;
+}
+
+/* the badge on the case, a slanted plate with the mark on it */
+.kb-badge {
+	position: absolute;
+	top: 16px;
+	right: 20px;
+	padding: 3px 42px 3px 20px;
+	line-height: 0;
+}
+
+.kb-badge::before {
+	content: "";
+	position: absolute;
+	inset: 0px;
+	transform: skew(-30deg);
+	background: linear-gradient(#fbfbfb, #e6e6e4);
+	border: 1px solid #94948e;
+	box-shadow: 0px 1px 2px rgba(0,0,0,.3);
+}
+
+.kb-badge img {
+	position: relative;
+	display: block;
+	height: 13px;
+	width: auto;
+}
+
 button.kb-key.kb-joined {
-	border-bottom: 1px solid #8f9082;
+	border-bottom: 0;
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
 	margin-bottom: 0;
+	box-shadow: none;
 }
 
 button.kb-key.kb-cont {
@@ -287,7 +347,21 @@ button.kb-key.kb-cont {
 	border-top-left-radius: 0;
 	border-top-right-radius: 0;
 	margin-top: 0;
-	justify-content: center;
+}
+
+button.kb-key.kb-joined.down, button.kb-key.kb-cont.down {
+	margin-top: 1px;
+	box-shadow: none;
+}
+
+button.kb-key.kb-joined.down {
+	border-bottom-width: 0;
+	margin-bottom: 0;
+}
+
+button.kb-key.kb-cont.down {
+	border-top-width: 0;
+	margin-top: 0;
 }
 
 button.kb-key.down {
@@ -301,6 +375,17 @@ button.kb-key.down {
 
 button.kb-key.down .shifted, button.kb-key.down .named {
 	color: #dce7f6;
+}
+
+/* the two halves share one gradient, so that no step shows at the seam */
+button.kb-key.kb-joined, button.kb-key.kb-joined.down {
+	background-size: 100% 200%;
+	background-position: top;
+}
+
+button.kb-key.kb-cont, button.kb-key.kb-cont.down {
+	background-size: 100% 200%;
+	background-position: bottom;
 }
 
 .kb-status {
