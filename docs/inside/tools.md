@@ -11,21 +11,26 @@ The other tools are built on it.
 ## Publishing
 
     tools/publish-pages.sh [--remote NAME] [--branch NAME] [--root REF] [--into DIR]
-                           [--skip PATTERN] [--nojekyll] [--no-push] [--dry-run]
+                           [--skip PATTERN] [--push] [--jekyll] [--dry-run]
 
-Publishes the root ref at the root of the `pages` branch and every other branch and tag under
-`ver/`, then commits and pushes. The container keeps the root clean and reserves one name instead of
-one per branch; `--into` changes it, `--into ''` publishes at the root. Publishing stops if the root
-ref already has an entry of that name. The branch is rebuilt from the refs on each
-run, so a deleted branch loses its directory. Identical files share their git object: publishing
-five versions of EstyJS costs about 12 KiB.
+Publishes the root ref at the root of the `pages` branch, and every other branch and tag under
+`ver/`, with `ver/index.html` listing them. Commits, and pushes only with `--push`.
+
+The container directory keeps the root clean and reserves one name instead of one per branch.
+`--into` changes it, `--into .` publishes at the root. Publishing stops if the root ref already has
+an entry of that name.
+
+`.nojekyll` is written unless `--jekyll` is given. GitHub Pages otherwise runs the branch through
+Jekyll, which drops folders called `vendor` or `node_modules` and anything starting with `_` or `.`.
+It has no effect on git-pages.
+
+The branch is rebuilt from the refs on each run, so a deleted branch loses its directory. Identical
+files share their git object: publishing five versions of EstyJS costs about 12 KiB.
 
 Forgejo releases are their tags, which are published. Release assets are not.
 
-git-pages does not poll, so the push has to reach it through a webhook or the git-pages Forgejo
-action. GitHub Pages rebuilds on push, but runs the branch through Jekyll, which drops folders
-called `vendor` or `node_modules` and anything starting with `_` or `.`. Publishing there needs
-`--nojekyll`.
+git-pages does not poll, so a push has to reach it through a webhook or the git-pages Forgejo
+action. GitHub Pages rebuilds on push.
 
 ## Checks
 

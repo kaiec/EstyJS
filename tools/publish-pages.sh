@@ -10,9 +10,14 @@
 #   https://<user>.codeberg.page/EstyJS/ver/development/
 #   https://<user>.codeberg.page/EstyJS/ver/v2.2.0/
 #
+# ver/index.html lists what was published, since neither host serves directory
+# listings.
+#
 # The pages branch is rebuilt from the refs on every run, so a deleted branch
 # loses its directory. Identical files share their git object, so a published
 # copy costs the difference and not the whole site.
+#
+# Commits but does not push unless --push is given.
 #
 # Forgejo releases are their tags, which are published; release assets are not.
 #
@@ -23,17 +28,17 @@
 #   --remote NAME     remote to read and push (default origin)
 #   --branch NAME     branch to publish into (default pages)
 #   --root REF        ref served at the root (default main)
-#   --into DIR        directory holding the versions (default ver, empty for
-#                     the root of the branch)
+#   --into DIR        directory holding the versions (default ver; . or an
+#                     empty string publishes them at the root of the branch)
 #   --skip PATTERN    skip refs matching this shell pattern, repeatable
-#   --nojekyll        add .nojekyll, needed on GitHub Pages
-#   --no-push         commit but do not push
+#   --push            push the pages branch when it changed
+#   --jekyll          do not write .nojekyll
 #   --dry-run         show what would be published, change nothing
 #
-# GitHub Pages runs the published branch through Jekyll, which drops folders
-# called vendor and node_modules and anything starting with _ or . . Publishing
-# there needs --nojekyll, or vendor/marked.min.js goes missing and the
-# documentation viewer stops working.
+# .nojekyll is written by default. GitHub Pages otherwise runs the branch
+# through Jekyll, which drops folders called vendor and node_modules and
+# anything starting with _ or . , taking vendor/marked.min.js with it. It has no
+# effect on git-pages.
 #
 set -euo pipefail
 
@@ -41,9 +46,9 @@ remote=origin
 pages_branch=pages
 root_ref=main
 into=ver
-push=yes
+push=no
 dry=no
-nojekyll=no
+nojekyll=yes
 skips=()
 
 while [ $# -gt 0 ]; do
@@ -53,15 +58,17 @@ while [ $# -gt 0 ]; do
         --root)   root_ref=$2; shift 2 ;;
         --into)   into=$2; shift 2 ;;
         --skip)   skips+=("$2"); shift 2 ;;
-        --nojekyll) nojekyll=yes; shift ;;
-        --no-push) push=no; shift ;;
+        --jekyll) nojekyll=no; shift ;;
+        --push)   push=yes; shift ;;
         --dry-run) dry=yes; push=no; shift ;;
-        -h|--help) sed -n '2,41p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,44p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "unknown option $1" >&2; exit 1 ;;
     esac
 done
 
 cd "$(git rev-parse --show-toplevel)"
+
+[ "$into" = "." ] && into=
 
 skipped() {
     local ref=$1 pattern
@@ -96,18 +103,19 @@ while read -r branch; do
     [ "$branch" = "$pages_branch" ] && continue
     [ "$branch" = HEAD ] && continue
     skipped "$branch" && continue
-    refs+=("refs/remotes/$remote/$branch:$(directory "$branch")")
+    refs+=("branch refs/remotes/$remote/$branch $(directory "$branch")")
 done < <(git for-each-ref --format='%(refname:strip=3)' "refs/remotes/$remote")
 
 while read -r tag; do
     [ -z "$tag" ] && continue
     skipped "$tag" && continue
-    refs+=("refs/tags/$tag:$(directory "$tag")")
+    refs+=("tag refs/tags/$tag $(directory "$tag")")
 done < <(git tag --list)
 
 echo "root: $remote/$root_ref"
 for entry in ${refs+"${refs[@]}"}; do
-    echo "  ${into:+$into/}${entry#*:}  <- ${entry%%:*}"
+    read -r _ ref dir <<<"$entry"
+    echo "  ${into:+$into/}$dir  <- $ref"
 done
 
 [ "$dry" = yes ] && { echo "dry run, nothing written"; exit 0; }
@@ -119,11 +127,60 @@ trap 'rm -rf "$build"; git worktree remove --force "$worktree" 2>/dev/null || tr
 # the site as it will be served
 git archive "refs/remotes/$remote/$root_ref" | tar -x -C "$build"
 for entry in ${refs+"${refs[@]}"}; do
-    ref=${entry%%:*}
-    dir=${entry#*:}
+    read -r _ ref dir <<<"$entry"
     mkdir -p "$build/${into:+$into/}$dir"
     git archive "$ref" | tar -x -C "$build/${into:+$into/}$dir"
 done
+
+# neither host serves directory listings, so the versions need one. Only with a
+# container directory: at the root the site has its own index.html.
+if [ -n "$into" ]; then
+    site=$(basename -s .git "$(git remote get-url "$remote")")
+    escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
+    {
+        cat <<HTML
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$(echo "$site" | escape) versions</title>
+<style>
+body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+       font-size: 17px; line-height: 1.6; color: #222; background: #ddd;
+       margin: 0; padding: 30px; }
+main { max-width: 640px; margin: auto; background: #f4f4f4; border: 1px solid #c4c4c4;
+       padding: 10px 28px 24px; }
+h1 { font-size: 24px; }
+ul { list-style: none; padding: 0; }
+li { margin: 6px 0; }
+a { color: #1658ad; }
+span { color: #5a5a5a; font-size: 15px; }
+</style>
+</head>
+
+<body>
+<main>
+<h1>$(echo "$site" | escape) versions</h1>
+<ul>
+<li><a href="../">$(echo "$root_ref" | escape)</a> <span>root, $(git log -1 --format=%cs "refs/remotes/$remote/$root_ref")</span></li>
+HTML
+        for entry in ${refs+"${refs[@]}"}; do
+            read -r kind ref dir <<<"$entry"
+            name=$(echo "$dir" | escape)
+            echo "<li><a href=\"$name/\">$name</a> <span>$kind, $(git log -1 --format=%cs "$ref")</span></li>"
+        done
+        cat <<HTML
+</ul>
+</main>
+</body>
+
+</html>
+HTML
+    } > "$build/$into/index.html"
+fi
 
 if [ "$nojekyll" = yes ]; then
     touch "$build/.nojekyll"
