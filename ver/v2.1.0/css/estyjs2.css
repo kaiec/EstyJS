@@ -1,0 +1,100 @@
+@font-face {
+	font-family: 'nostalgie';
+	src: url('Sporniket-Nostalgie2-Console.woff');
+}
+
+#estyjs
+{
+	margin: auto;
+	width: 1000px;
+}
+
+#screen
+{
+	background-image: url('../img/sc1224-bg.png');
+	background-clip: padding-box;
+	border-width: 0;
+	background-size: 923px 745px;
+	background-origin: padding-box;
+	padding: 170px 150px 175px 133px;
+	background-repeat: no-repeat;
+}
+
+#EstyJsOutput {
+	border-width:0;
+}
+
+
+#buttonpanel
+{
+	display: flex;
+}
+
+body
+{
+	background-color:#DDDDDD;
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 22px;
+}	
+
+h1
+{
+	font-size: 30px;
+}
+
+h2
+{
+	font-size: 35px;
+}
+
+canvas
+{
+	background-color:#000000;
+	border: 1px solid #777777;
+}
+
+#logo {
+	margin-right:40px;
+}
+
+
+button {
+	background-color: #8E98A2;
+	border-color:#000000;
+	border-width: 2px;
+	border-style: groove;
+	color: white;
+	border-width: 3px;
+	box-shadow:5px 5px 5px rgba(0,0,0,.8);
+	display:inline-block;
+	padding:5px 15px 5px 10px;
+	text-decoration:none;
+	margin:0px -2px 0px -2px;
+	width:100px;
+	height:62px;
+}
+  
+button:hover {
+	 bottom:-5px;
+	 position: relative;
+	 box-shadow:0px 0px 5px rgba(0,0,0,.5);
+  }
+  
+button {
+	transform: skew(-40deg);
+  }
+  
+button span {
+	display:inline-block;
+	transform: skew(40deg);
+  }
+
+#settings{
+	display: none;
+}
+
+#content {
+	width: 1000px;
+	margin: auto;
+}
