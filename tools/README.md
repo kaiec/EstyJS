@@ -69,6 +69,19 @@ node tools/check-disks.js --check known.json disks/*.st disks/*.msa disks/*.stx
 writes the frames out as raw RGBA next to the hashes, converted the same way as
 the screenshots above.
 
+## Checking the keyboard mapping
+
+```
+node tools/check-keymap.js [--list]
+```
+
+Drives the keyboard on its own, without the rest of the machine: a key event
+goes in, and the bytes the ACIA would hand the ST come out. Checks that every
+physical key sends the scancode the ST expects, that all 95 ST keys are
+reachable, that keys the ST does not have send nothing, and that browser
+auto-repeat does not turn into a stream of make codes. `--list` prints the
+mapping table.
+
 ## Checking the joystick switch
 
 ```

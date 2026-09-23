@@ -99,111 +99,108 @@ EstyJs.Keyboard = function (opts) {
     var readData = 0;
     var writeData = 0;
 
-    var keyCodes = {
-        27: { scancode: 0x01 }, //	Esc
-        49: { scancode: 0x02 }, //	1
-        50: { scancode: 0x03 }, //	2
-        51: { scancode: 0x04 }, //	3
-        52: { scancode: 0x05 }, //	4
-        53: { scancode: 0x06 }, //	5
-        54: { scancode: 0x07 }, //	6
-        55: { scancode: 0x08 }, //	7
-        56: { scancode: 0x09 }, //	8
-        57: { scancode: 0x0A }, //	9
-        48: { scancode: 0x0B }, //	0
-        173: { scancode: 0x0C }, //	-
-        61: { scancode: 0x0D }, //	==
-        8: { scancode: 0x0E }, //	BS
-        9: { scancode: 0x0F }, //	TAB
-        81: { scancode: 0x10 }, //	Q
-        87: { scancode: 0x11 }, //	W
-        69: { scancode: 0x12 }, //	E
-        82: { scancode: 0x13 }, //	R
-        84: { scancode: 0x14 }, //	T
-        89: { scancode: 0x15 }, //	Y
-        85: { scancode: 0x16 }, //	U
-        73: { scancode: 0x17 }, //	I
-        79: { scancode: 0x18 }, //	O
-        80: { scancode: 0x19 }, //	P
-        219: { scancode: 0x1A }, //	[
-        221: { scancode: 0x1B }, //	]
-        13: { scancode: 0x1C }, //	RET
-        17: { scancode: 0x1D }, //	CTRL
-        65: { scancode: 0x1E }, //	A
-        83: { scancode: 0x1F }, //	S
-        68: { scancode: 0x20 }, //	D
-        70: { scancode: 0x21 }, //	F
-        71: { scancode: 0x22 }, //	G
-        72: { scancode: 0x23 }, //	H
-        74: { scancode: 0x24 }, //	J
-        75: { scancode: 0x25 }, //	K
-        76: { scancode: 0x26 }, //	L
-        59: { scancode: 0x27 }, //	;
-        222: { scancode: 0x28 }, //	'
-        192: { scancode: 0x29 }, //	`
-        16: { scancode: 0x2A }, //	(LEFT) SHIFT
-        220: { scancode: 0x2B }, //	\ (backslash)
-        90: { scancode: 0x2C }, //	Z
-        88: { scancode: 0x2D }, //	X
-        67: { scancode: 0x2E }, //	C
-        86: { scancode: 0x2F }, //	V
-        66: { scancode: 0x30 }, //	B
-        78: { scancode: 0x31 }, //	N
-        77: { scancode: 0x32 }, //	M
-        900: { scancode: 0x33 }, //	,
-        190: { scancode: 0x34 }, //	.
-        191: { scancode: 0x35 }, //	/
-        901: { scancode: 0x36 }, //	(RIGHT) SHIFT
-        902: { scancode: 0x37 }, //	{ NOT USED }
-        18: { scancode: 0x38 }, //	ALT
-        32: { scancode: 0x39 }, //	SPACE BAR
-        20: { scancode: 0x3A }, //	CAPS LOCK
-        112: { scancode: 0x3B }, //	F1
-        113: { scancode: 0x3C }, //	F2
-        114: { scancode: 0x3D }, //	F3
-        115: { scancode: 0x3E }, //	F4
-        116: { scancode: 0x3F }, //	F5
-        117: { scancode: 0x40 }, //	F6
-        118: { scancode: 0x41 }, //	F7
-        119: { scancode: 0x42 }, //	F8
-        120: { scancode: 0x43 }, //	F9
-        121: { scancode: 0x44 }, //	F10
-        903: { scancode: 0x45 }, //	{ NOT USED }
-        904: { scancode: 0x46 }, //	{ NOT USED }
-        36: { scancode: 0x47 }, //	HOME
-        38: { scancode: 0x48 }, //	UP ARROW
-        905: { scancode: 0x49 }, //	{ NOT USED }
-        109: { scancode: 0x4A }, //	KEYPAD -
-        37: { scancode: 0x4B }, //	LEFT ARROW
-        906: { scancode: 0x4C }, //	{ NOT USED }
-        39: { scancode: 0x4D }, //	RIGHT ARROW
-        107: { scancode: 0x4E }, //	KEYPAD +
-        907: { scancode: 0x4F }, //	{ NOT USED }
-        40: { scancode: 0x50 }, //	DOWN ARROW
-        908: { scancode: 0x51 }, //	{ NOT USED }
-        45: { scancode: 0x52 }, //	INSERT
-        46: { scancode: 0x53 }, //	DEL
-        909: { scancode: 0x54 }, //	{ NOT USED }
-        910: { scancode: 0x5F }, //	{ NOT USED }
-        123: { scancode: 0x60 }, //	ISO KEY
-        33: { scancode: 0x61 }, //	UNDO
-        34: { scancode: 0x62 }, //	HELP
-        911: { scancode: 0x63 }, //	KEYPAD (
-        912: { scancode: 0x64 }, //	KEYPAD )
-        106: { scancode: 0x65 }, //	KEYPAD /
-        108: { scancode: 0x66 }, //	KEYPAD *
-        103: { scancode: 0x67 }, //	KEYPAD 7
-        104: { scancode: 0x68 }, //	KEYPAD 8
-        105: { scancode: 0x69 }, //	KEYPAD 9
-        100: { scancode: 0x6A }, //	KEYPAD 4
-        101: { scancode: 0x6B }, //	KEYPAD 5
-        102: { scancode: 0x6C }, //	KEYPAD 6
-        97: { scancode: 0x6D }, //	KEYPAD 1
-        98: { scancode: 0x6E }, //	KEYPAD 2
-        99: { scancode: 0x6F }, //	KEYPAD 3
-        96: { scancode: 0x70 }, //	KEYPAD 0
-        110: { scancode: 0x71 }, //	KEYPAD .
-        913: { scancode: 0x72} //	KEYPAD ENTER
+    // Physical key (KeyboardEvent.code) to ST scancode. code names the key by
+    // position, identically on every keyboard layout and in every browser, which
+    // is what an ST scancode means too: the two line up without a translation
+    // that depends on where the user lives.
+    var stScancodes = {
+        'Escape':          0x01,   // Esc
+        'Digit1':          0x02,   // 1
+        'Digit2':          0x03,   // 2
+        'Digit3':          0x04,   // 3
+        'Digit4':          0x05,   // 4
+        'Digit5':          0x06,   // 5
+        'Digit6':          0x07,   // 6
+        'Digit7':          0x08,   // 7
+        'Digit8':          0x09,   // 8
+        'Digit9':          0x0A,   // 9
+        'Digit0':          0x0B,   // 0
+        'Minus':           0x0C,   // -
+        'Equal':           0x0D,   // =
+        'Backspace':       0x0E,   // Backspace
+        'Tab':             0x0F,   // Tab
+        'KeyQ':            0x10,   // Q
+        'KeyW':            0x11,   // W
+        'KeyE':            0x12,   // E
+        'KeyR':            0x13,   // R
+        'KeyT':            0x14,   // T
+        'KeyY':            0x15,   // Y
+        'KeyU':            0x16,   // U
+        'KeyI':            0x17,   // I
+        'KeyO':            0x18,   // O
+        'KeyP':            0x19,   // P
+        'BracketLeft':     0x1A,   // [
+        'BracketRight':    0x1B,   // ]
+        'Enter':           0x1C,   // Return
+        'ControlLeft':     0x1D,   // Control
+        'ControlRight':    0x1D,   // Control
+        'KeyA':            0x1E,   // A
+        'KeyS':            0x1F,   // S
+        'KeyD':            0x20,   // D
+        'KeyF':            0x21,   // F
+        'KeyG':            0x22,   // G
+        'KeyH':            0x23,   // H
+        'KeyJ':            0x24,   // J
+        'KeyK':            0x25,   // K
+        'KeyL':            0x26,   // L
+        'Semicolon':       0x27,   // ;
+        'Quote':           0x28,   // '
+        'Backquote':       0x29,   // `
+        'ShiftLeft':       0x2A,   // left Shift
+        'Backslash':       0x2B,   // \\
+        'KeyZ':            0x2C,   // Z
+        'KeyX':            0x2D,   // X
+        'KeyC':            0x2E,   // C
+        'KeyV':            0x2F,   // V
+        'KeyB':            0x30,   // B
+        'KeyN':            0x31,   // N
+        'KeyM':            0x32,   // M
+        'Comma':           0x33,   // ,
+        'Period':          0x34,   // .
+        'Slash':           0x35,   // /
+        'ShiftRight':      0x36,   // right Shift
+        'AltLeft':         0x38,   // Alternate
+        'AltRight':        0x38,   // Alternate
+        'Space':           0x39,   // Space
+        'CapsLock':        0x3A,   // Caps Lock
+        'F1':              0x3B,   // F1
+        'F2':              0x3C,   // F2
+        'F3':              0x3D,   // F3
+        'F4':              0x3E,   // F4
+        'F5':              0x3F,   // F5
+        'F6':              0x40,   // F6
+        'F7':              0x41,   // F7
+        'F8':              0x42,   // F8
+        'F9':              0x43,   // F9
+        'F10':             0x44,   // F10
+        'Home':            0x47,   // Home
+        'ArrowUp':         0x48,   // Up
+        'ArrowLeft':       0x4B,   // Left
+        'ArrowRight':      0x4D,   // Right
+        'ArrowDown':       0x50,   // Down
+        'Insert':          0x52,   // Insert
+        'Delete':          0x53,   // Delete
+        'IntlBackslash':   0x60,   // the ISO key, < > on a European ST
+        'PageUp':          0x61,   // Undo
+        'PageDown':        0x62,   // Help
+        'NumLock':         0x63,   // keypad (
+        'ScrollLock':      0x64,   // keypad )
+        'NumpadDivide':    0x65,   // keypad /
+        'NumpadMultiply':  0x66,   // keypad *
+        'NumpadSubtract':  0x4A,   // keypad -
+        'NumpadAdd':       0x4E,   // keypad +
+        'Numpad7':         0x67,   // keypad 7
+        'Numpad8':         0x68,   // keypad 8
+        'Numpad9':         0x69,   // keypad 9
+        'Numpad4':         0x6A,   // keypad 4
+        'Numpad5':         0x6B,   // keypad 5
+        'Numpad6':         0x6C,   // keypad 6
+        'Numpad1':         0x6D,   // keypad 1
+        'Numpad2':         0x6E,   // keypad 2
+        'Numpad3':         0x6F,   // keypad 3
+        'Numpad0':         0x70,   // keypad 0
+        'NumpadDecimal':   0x71,   // keypad .
+        'NumpadEnter':     0x72,   // keypad Enter
     };
 
     function toBCD(v) {
@@ -314,17 +311,17 @@ EstyJs.Keyboard = function (opts) {
 
     function keyDown(evt) {
         if (self.active) {
-            registerKeyDown(evt.keyCode);
+            //a held key repeats in TOS, not in the keyboard, so the repeats the
+            //browser sends would be make codes with no break between them
+            if (!evt.repeat) registerKeyDown(evt.code);
             if (!evt.metaKey) return false;
         }
     }
-    function registerKeyDown(keyNum) {
-        var keyCode = keyCodes[keyNum];
+    function registerKeyDown(physicalKey) {
+        var keyCode = stScancodes[physicalKey];
         if (keyCode == null) return;
 
         if (resetTime > 0) return;
-
-        keyCode = keyCode.scancode;
 
         //75 = left cursor, 77 = right cursor, 80 = down, 72 = up, 0x1d = control
         if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
@@ -375,16 +372,14 @@ EstyJs.Keyboard = function (opts) {
         }
     }
     function keyUp(evt) {
-        registerKeyUp(evt.keyCode);
+        registerKeyUp(evt.code);
         if (self.active && !evt.metaKey) return false;
     }
-    function registerKeyUp(keyNum) {
-        var keyCode = keyCodes[keyNum];
+    function registerKeyUp(physicalKey) {
+        var keyCode = stScancodes[physicalKey];
         if (keyCode == null) return;
 
         if (resetTime > 0) return;
-
-        keyCode = keyCode.scancode;
 
         if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
             switch (keyCode) {

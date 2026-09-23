@@ -194,23 +194,42 @@ function createMachine(estyDir, opts = {}) {
     machine.doubleClick = function () { return machine.click(2, 3, 3); };
 
     // --- keyboard ----------------------------------------------------------
-    // Joystick 1 is the cursor keys plus control: 37/38/39/40 and 17.
-    const keyEvent = (keyCode) => ({ keyCode, which: keyCode, metaKey: false,
-                                     stopPropagation() {}, preventDefault() {} });
+    // The emulator identifies keys by position (KeyboardEvent.code), so that is
+    // what a key is here: 'ArrowUp', 'KeyA', 'ControlLeft'. The old numeric key
+    // codes are still accepted, so existing scripts and --key options keep
+    // working: joystick 1 is 37/38/39/40 and 17.
+    const LEGACY = {
+        8: 'Backspace', 9: 'Tab', 13: 'Enter', 16: 'ShiftLeft', 17: 'ControlLeft',
+        18: 'AltLeft', 20: 'CapsLock', 27: 'Escape', 32: 'Space', 33: 'PageUp',
+        34: 'PageDown', 36: 'Home', 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight',
+        40: 'ArrowDown', 45: 'Insert', 46: 'Delete'
+    };
 
-    machine.keyDown = function (keyCode) {
-        sandbox.document.onkeydown(keyEvent(keyCode));
+    function keyCodeOf(key) {
+        if (typeof key === 'string') return key;
+        if (LEGACY[key]) return LEGACY[key];
+        if (key >= 48 && key <= 57) return 'Digit' + (key - 48);
+        if (key >= 65 && key <= 90) return 'Key' + String.fromCharCode(key);
+        if (key >= 112 && key <= 123) return 'F' + (key - 111);
+        return String(key);
+    }
+
+    const keyEvent = (key) => ({ code: keyCodeOf(key), repeat: false, metaKey: false,
+                                 stopPropagation() {}, preventDefault() {} });
+
+    machine.keyDown = function (key) {
+        sandbox.document.onkeydown(keyEvent(key));
         return machine;
     };
 
-    machine.keyUp = function (keyCode) {
-        sandbox.document.onkeyup(keyEvent(keyCode));
+    machine.keyUp = function (key) {
+        sandbox.document.onkeyup(keyEvent(key));
         return machine;
     };
 
-    machine.key = function (keyCode, frames = 4) {
-        machine.keyDown(keyCode); machine.run(frames);
-        machine.keyUp(keyCode);   machine.run(frames);
+    machine.key = function (key, frames = 4) {
+        machine.keyDown(key); machine.run(frames);
+        machine.keyUp(key);   machine.run(frames);
         return machine;
     };
 

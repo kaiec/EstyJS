@@ -103,7 +103,8 @@
 			<li>Copy protection that relies on disk rotation or timing is not emulated, so some
 				original disks still refuse to run.</li>
 			<li>No writing to floppies. Disks are reported to TOS as write protected.</li>
-			<li>Only partial support of keyboard/mouse/joystick.</li>
+			<li>Joystick port 0 is not emulated, so two player games do not work. A connected
+				gamepad takes over from the cursor keys.</li>
 			<li>Timer pulse width & high accuracy &lt; 1 scanline is not supported.</li>
 			<li>No border effects (as used by some demos), only the official resolutions are supported.</li>
 		</ul>
@@ -116,6 +117,27 @@
 				Joystick button turns that off, so that the cursor keys and ctrl reach the ST as
 				keys again.</li>
 		</ul>
+
+		<h2>Keyboard</h2>
+		<p>
+			Keys are taken by position, not by the character printed on them, so the keyboard layout
+			of the host makes no difference: the key where a US keyboard has <strong>Y</strong> is the
+			ST's <strong>Y</strong> key, whatever a German or French keyboard calls it. Everything
+			sits where it looks, apart from the keys the ST has and a PC does not:
+		</p>
+		<ul>
+			<li><strong>Undo</strong> is Page Up, <strong>Help</strong> is Page Down.</li>
+			<li>The <strong>ISO key</strong> (<em>&lt; &gt;</em> on a European ST) is the key beside
+				the left shift key.</li>
+			<li>The keypad's <strong>(</strong> and <strong>)</strong> are Num Lock and Scroll
+				Lock.</li>
+			<li>Cursor keys and ctrl are joystick 1 until the Joystick button is switched off.</li>
+		</ul>
+		<p>
+			Note that the ST's operating system here uses a US keyboard table, so the letter the ST
+			receives is the one at that position on a US keyboard. That is what games expect, since
+			they read the key position rather than the character.
+		</p>
 
 		<h2>Disk images</h2>
 		<p>
