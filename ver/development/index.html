@@ -1,0 +1,132 @@
+﻿<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta name="description" content="Javascript based Atari ST Emulator">
+	<meta name="keywords" content="JavaScript, Atari, ST, Emulator, EstyJs">
+	<meta name="author" content="Darren Coles">
+	<title>EstyJs</title>
+	<link rel="stylesheet" type="text/css" href="css/estyjs2.css">
+	<script src="esty2-gui.js"></script>
+	<script src="esty2-keyboard.js"></script>
+
+	<script src="estyjs/estyjs.js"></script>
+	<script src="estyjs/disk.js"></script>
+	<script src="estyjs/processor.js"></script>
+	<script src="estyjs/keyboard.js"></script>
+	<script src="estyjs/mfp.js"></script>
+	<script src="estyjs/fdc.js"></script>
+	<script src="estyjs/io.js"></script>
+	<script src="estyjs/bug.js"></script>
+	<script src="estyjs/display.js"></script>
+	<script src="estyjs/memory.js"></script>
+	<script src="estyjs/snapshot.js"></script>
+	<script src="estyjs/sound.js"></script>
+	<script src="estyjs/files.js"></script>
+	<script src="estyjs/js-unzip.js"></script>
+	<script src="estyjs/rawinflate.js"></script>
+
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function (event) {
+			// Your code to run since DOM is loaded and ready
+			console.log("Loaded")
+			document.getElementById('selectedFile').addEventListener('change', fileSelected, false);
+			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
+			document.getElementById('selectedTOS').addEventListener('change', tosSelected, false);
+			EstyKeyboard.create('keyboardpanelbody');
+			splashScreen('img/logo.png', function(){
+				estyjs = EstyJs("EstyJsOutput");
+				estyjs.setRowSkip(false);
+				estyjs.setMonoMonitor(false);
+				EstyKeyboard.listen();
+			});
+		});
+	</script>
+</head>
+
+<body>
+	<div id="estyjs">
+		<div id="screen">
+			<canvas id="EstyJsOutput" width="640" height="400">
+			</canvas>
+		</div>
+		<div id="buttonpanel">
+			<div id="logo">
+				<img src="img/logo.png" alt="EstyJS Logo">
+			</div>
+			<button id="btnFullscreen" onclick="fullScreen();"><span>Expand</span></button>
+			<button id="btnLocked" onclick="lockMouse();"><span>Lock</span></button>
+			<button onclick="reset()" id="btnReset"><span>Reset</span></button>
+			<button onclick="colorToggle()" id="btnColor"><span>Screen</span></button>
+			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
+			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
+			<button onclick="joystickToggle()" id="btnJoystick"><span>Joystick off</span></button>
+			<input type="file" id="selectedTOS" accept=".img" style="display: none;">
+		</div>
+		<div id="floppies">
+			<button onclick="document.getElementById('selectedTOS').click();" id="btnTOS"><img src="img/rom.png" id="rom" width="176" height="83"><div>ROM</div></button>
+			<input type="file" id="selectedFile" accept=".sts,.st,.msa,.stx,.zip" style="display: none;">
+			<input type="file" id="selectedFileB" accept=".sts,.st,.msa,.stx,.zip" style="display: none;">
+			<button onclick="document.getElementById('selectedFile').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-1" width="300" height="83"/><div>DISK A</div></button>
+			<button onclick="document.getElementById('selectedFileB').click();" id="btnBrowse"><img src="img/floppy-empty.png" id="floppy-2" width="300" height="83"/><div>DISK B</div></button>
+		</div>
+
+		<div id="diskmessage" role="status" aria-live="polite"></div>
+
+		<details id="keyboardpanel">
+			<summary>ST keyboard &mdash; see where your keys land, or click to type</summary>
+			<div id="keyboardpanelbody"></div>
+		</details>
+
+		<div id="settings">
+			<input type="checkbox" id="showpct" onclick="changeShowPct()">Show Speed
+			<input type="checkbox" id="frameskip" onclick="changeFrameskip()">Frameskip
+			<input type="checkbox" id="ram" checked="checked" onclick="changeRamSize()">1Meg
+		</div>
+	</div>
+
+	<div id="content">
+		<h2>EstyJS 2.0</h2>
+		<p>
+			<img src="img/Atari_1040STf-600.png" style="float:right;" alt="Photo of an Atari ST">
+			EstyJS is an emulator for the Atari ST, written in 100% pure JavaScript, originally
+			developed by Darren Coles. Since 2024 and the release of EstyJS 2.0, the project is
+			maintained by Kai Eckert. The source code is available on
+			<a href="https://github.com/kaiec/EstyJS">GitHub</a>. Please use GitHub issues for
+			feedback, bugs and ideas.
+		</p>
+		<p>
+			EstyJS is not a full emulation and focuses on running games or old software for
+			demonstration purposes. See
+			<a href="docs.html#using/limitations">limitations</a>.
+		</p>
+
+		<h2>Usage</h2>
+		<ul>
+			<li>Click the floppy drives to load a disk image (.st, .msa, .stx and .zip are
+				supported).</li>
+			<li>Click the ROM slot to use a different TOS image (.img) instead of EmuTOS.</li>
+			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
+			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad). The
+				Joystick button switches this off.</li>
+			<li>Keys are identified by position, so the keyboard layout does not matter. The ST
+				keyboard panel shows where a key lands and sends keys a PC keyboard does not
+				have.</li>
+		</ul>
+
+		<h2>Documentation</h2>
+		<ul>
+			<li><a href="docs.html#using/disks">Disk images</a></li>
+			<li><a href="docs.html#using/keyboard">Keyboard</a></li>
+			<li><a href="docs.html#using/joystick">Joystick</a></li>
+			<li><a href="docs.html#using/limitations">Limitations</a></li>
+			<li><a href="docs.html#credits">Credits and license</a></li>
+		</ul>
+	</div>
+
+
+</body>
+
+</html>

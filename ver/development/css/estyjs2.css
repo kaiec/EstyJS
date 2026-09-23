@@ -1,0 +1,245 @@
+@font-face {
+	font-family: 'nostalgie';
+	src: url('Sporniket-Nostalgie2-Console.woff');
+}
+
+#estyjs
+{
+	margin: auto;
+	width: 1040px;
+}
+
+#screen
+{
+	background-image: url('../img/sm124-sc-bg.png');
+	background-clip: padding-box;
+	border-width: 0;
+	background-size: 1000px 808px;
+	background-origin: padding-box;
+	padding: 206px 0px 200px 175px;
+	background-repeat: no-repeat;
+}
+
+#EstyJsOutput {
+	border-width:0;
+}
+
+
+#buttonpanel
+{
+	display: flex;
+	margin-left: 60px;
+}
+
+body
+{
+	background-color:#DDDDDD;
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 22px;
+}	
+
+h1
+{
+	font-size: 30px;
+}
+
+h2
+{
+	font-size: 35px;
+}
+
+canvas
+{
+	background-color:#000000;
+	border: 1px solid #777777;
+}
+
+#logo {
+	margin-right:40px;
+}
+
+
+#buttonpanel button {
+	background-color: #aaa9aa;
+	border-color:#000000;
+	border-width: 2px;
+	border-style: groove;
+	color: white;
+	border-width: 3px;
+	box-shadow:5px 5px 5px rgba(0,0,0,.8);
+	display:inline-flex;
+	padding:3px 5px 5px 22px;
+	text-decoration:none;
+	margin:0px -2px 0px -2px;
+	width:100px;
+	height:62px;
+}
+  
+#buttonpanel button:hover {
+	 bottom:-5px;
+	 position: relative;
+	 box-shadow:0px 0px 5px rgba(0,0,0,.5);
+  }
+  
+#buttonpanel button {
+	transform: skew(-40deg);
+  }
+  
+#buttonpanel button span {
+	display:inline-block;
+	transform: skew(40deg);
+  }
+
+#settings{
+	display: none;
+}
+
+#content {
+	width: 1000px;
+	margin: auto;
+}
+
+#floppies {
+	margin-left:35px;
+	margin-top: 10px;
+}
+
+#floppies button {
+	margin: 10px 0px 10px 25px;
+	padding: 0px;
+	border: 0px;
+}
+#floppies button div {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 22px;
+}
+
+#floppy-1, #floppy-2, #rom{
+	box-shadow:5px 5px 5px rgba(0,0,0,.8);
+}
+
+/* says what happened to the last file picked, so that a file EstyJS cannot
+   read is not the same as nothing happening */
+#diskmessage {
+	margin: 0px 0px 10px 60px;
+	min-height: 26px;
+	font-size: 18px;
+	color: #333333;
+}
+
+#diskmessage.problem {
+	color: #a02000;
+}
+
+/* ---- the ST keyboard drawn in the page ---- */
+
+#keyboardpanel {
+	margin: 0px 0px 20px 60px;
+	width: 940px;
+}
+
+#keyboardpanel > summary {
+	cursor: pointer;
+	font-size: 18px;
+	padding: 4px 0px;
+	color: #333333;
+	width: max-content;
+}
+
+#keyboardpanel > summary:hover {
+	color: #000000;
+}
+
+.kb-countries {
+	margin: 10px 0px;
+	font-size: 16px;
+	color: #333333;
+}
+
+button.kb-country {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 16px;
+	background-color: #cccccc;
+	border: 2px outset #bbbbbb;
+	color: #333333;
+	padding: 2px 10px;
+	margin-right: 4px;
+	cursor: pointer;
+}
+
+button.kb-country.chosen {
+	background-color: #888888;
+	border-style: inset;
+	color: #ffffff;
+}
+
+.kb-keyboard {
+	--kb-qu: 9px;           /* a quarter of a key */
+	--kb-row: 36px;
+	display: flex;
+	align-items: flex-start;
+	gap: 18px;
+	background-color: #b8b8b4;
+	border: 2px solid #9a9a96;
+	padding: 10px;
+	width: max-content;
+}
+
+.kb-block {
+	display: grid;
+	grid-auto-rows: var(--kb-row);
+}
+
+button.kb-key {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 13px;
+	line-height: 1.05;
+	background-color: #e8e8e4;
+	border: 1px solid #a0a09c;
+	border-bottom-width: 3px;
+	border-radius: 3px;
+	color: #222222;
+	padding: 2px 3px;
+	margin: 1px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: flex-start;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+	touch-action: none;
+}
+
+button.kb-key .shifted {
+	font-size: 11px;
+	color: #666666;
+}
+
+button.kb-key .named {
+	font-size: 11px;
+	color: #444444;
+}
+
+button.kb-key.down {
+	background-color: #f5a623;
+	border-color: #b8791a;
+	border-bottom-width: 1px;
+	margin-top: 2px;
+	color: #000000;
+}
+
+button.kb-key.down .shifted, button.kb-key.down .named {
+	color: #000000;
+}
+
+.kb-status {
+	margin-top: 10px;
+	font-size: 16px;
+	color: #333333;
+	min-height: 22px;
+}
