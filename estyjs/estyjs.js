@@ -227,24 +227,28 @@ function EstyJs(output) {
 		snapshot.loadSnapshot(file);
 	}
 
-	self.openFloppyFile = function (drive, file) {
-		fdc.loadFile(drive, file);
+	self.openFloppyFile = function (drive, file, callback) {
+		fdc.loadFile(drive, file, callback);
 	}
 
-	self.openZipFile = function (drive, file) {
+	self.openZipFile = function (drive, file, callback) {
 		function zipCallback(files) {
 			for (var i = 0; i < files.length; i++) {
 				var fname = files[i];
 				var ext = fname.substr(fname.lastIndexOf('.')).toLowerCase();
 				if (ext == '.sts') {
 					snapshot.loadSnapshot(file);
-					break;
+					if (callback) callback({ ok: true, snapshot: true });
+					return;
 				}
 				if (ext == '.st' || ext == '.msa' || ext == '.stx') {
-					fdc.loadFile(drive, file);
-					break;
+					fdc.loadFile(drive, file, callback);
+					return;
 				}
 			}
+
+			//nothing in the archive that EstyJS knows how to read
+			if (callback) callback({ ok: false });
 		}
 
 		fileManager.getZipFilenames(file, zipCallback);

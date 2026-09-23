@@ -69,6 +69,17 @@ node tools/check-disks.js --check known.json disks/*.st disks/*.msa disks/*.stx
 writes the frames out as raw RGBA next to the hashes, converted the same way as
 the screenshots above.
 
+## Checking the file picker
+
+```
+node tools/check-picker.js
+```
+
+Runs the picker handlers from `esty2-gui.js` against a stub DOM and a stub
+emulator, and checks the message and the drive state for each kind of file: one
+that reads, one with a known extension that turns out not to be a disk, a format
+EstyJS does not support, a snapshot, a cancelled dialog.
+
 ## Rendering a recording
 
 ```

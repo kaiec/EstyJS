@@ -119,3 +119,16 @@ canvas
 #floppy-1, #floppy-2, #rom{
 	box-shadow:5px 5px 5px rgba(0,0,0,.8);
 }
+
+/* says what happened to the last file picked, so that a file EstyJS cannot
+   read is not the same as nothing happening */
+#diskmessage {
+	margin: 0px 0px 10px 60px;
+	min-height: 26px;
+	font-size: 18px;
+	color: #333333;
+}
+
+#diskmessage.problem {
+	color: #a02000;
+}

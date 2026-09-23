@@ -21,53 +21,101 @@ function pauseResume() {
 }
 
 
+// What the file picker accepts, for the message shown when it does not.
+var READABLE_FILES = '.st, .msa, .stx, .zip and .sts';
+
+function diskMessage(text, isProblem) {
+	var el = document.querySelector('#diskmessage');
+	if (el == null) return;
+	el.textContent = text;
+	el.className = isProblem ? 'problem' : '';
+}
+
+function showDrive(drive, inserted) {
+	var img = document.querySelector(drive == 'B' ? '#floppy-2' : '#floppy-1');
+	if (img != null) img.src = inserted ? 'img/floppy-active.png' : 'img/floppy-empty.png';
+}
+
+function extensionOf(name) {
+	var dot = name.lastIndexOf('.');
+	return (dot == -1) ? '' : name.substr(dot).toLowerCase();
+}
+
+function describeDisk(result) {
+	return result.format + ', ' + result.tracks + ' tracks, ' +
+	       (result.sides > 1 ? 'double sided' : 'single sided');
+}
+
+// A file only counts as inserted once it has been read and understood, which
+// happens after the picker has returned: until then nothing on screen changes.
+function diskLoaded(drive, name, result) {
+	if (result && result.snapshot) {
+		diskMessage('Loaded the snapshot in ' + name + '.', false);
+		return;
+	}
+
+	if (result && result.ok) {
+		showDrive(drive, true);
+		diskMessage('Drive ' + drive + ': ' + name + ' (' + describeDisk(result) + ')', false);
+	} else {
+		showDrive(drive, false);
+		diskMessage('Drive ' + drive + ' is empty: ' + name +
+		            ' is not a disk image EstyJS can read.', true);
+	}
+}
+
+function diskSelected(evt, drive) {
+	var files = evt.target.files;
+
+	//so that picking the same file again is not ignored
+	evt.target.value = '';
+
+	if (files.length == 0) return;
+
+	var file = files[0];
+	var ext = extensionOf(file.name);
+
+	function loaded(result) {
+		diskLoaded(drive, file.name, result);
+	}
+
+	if (ext == '.sts') {
+		estyjs.openSnapshotFile(file);
+		diskMessage('Loaded the snapshot in ' + file.name + '.', false);
+	} else if (ext == '.st' || ext == '.msa' || ext == '.stx') {
+		estyjs.openFloppyFile(drive, file, loaded);
+	} else if (ext == '.zip') {
+		estyjs.openZipFile(drive, file, loaded);
+	} else {
+		//nothing was loaded, so whatever is in the drive stays there
+		diskMessage('EstyJS cannot read ' + (ext == '' ? 'files without an extension' : ext + ' files') +
+		            '. It reads ' + READABLE_FILES + '.', true);
+	}
+}
+
 function tosSelected(evt) {
 	var files = evt.target.files;
-	if (files.length>0) {
-		if (files[0].name.lastIndexOf('.')!=-1) {
-			var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
-			if (ext == '.img') {
-			    estyjs.changeTOS(files[0]);
-			}
-		}
+
+	evt.target.value = '';
+
+	if (files.length == 0) return;
+
+	var file = files[0];
+
+	if (extensionOf(file.name) == '.img') {
+		estyjs.changeTOS(file);
+		diskMessage('Using the ROM in ' + file.name + '.', false);
+	} else {
+		diskMessage('A ROM has to be a .img file.', true);
 	}
-	
 }
 
 function fileSelected(evt) {
-	var files = evt.target.files;
-	if (files.length>0) {
-		if (files[0].name.lastIndexOf('.')!=-1) {
-			var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
-			if (ext == '.sts') {
-			    estyjs.openSnapshotFile(files[0]);
-			} else if (ext == '.st' || ext == '.msa' || ext == '.stx') {
-			    estyjs.openFloppyFile('A', files[0]);
-			} else if (ext == '.zip') {
-			    estyjs.openZipFile('A', files[0]);
-			}
-            document.querySelector("#floppy-1").src = 'img/floppy-active.png';
-		}
-	}
-	
+	diskSelected(evt, 'A');
 }
 
 function fileSelected2(evt) {
-    var files = evt.target.files;
-    if (files.length > 0) {
-        if (files[0].name.lastIndexOf('.') != -1) {
-            var ext = files[0].name.substr(files[0].name.lastIndexOf('.')).toLowerCase();
-            if (ext == '.sts') {
-                estyjs.openSnapshotFile(files[0]);
-            } else if (ext == '.st' || ext == '.msa' || ext == '.stx') {
-                estyjs.openFloppyFile('B', files[0]);
-            } else if (ext == '.zip') {
-                estyjs.openZipFile('B', files[0]);
-            }
-            document.querySelector("#floppy-2").src = 'img/floppy-active.png';
-        }
-    }
-
+	diskSelected(evt, 'B');
 }
 
 function colorToggle() {
@@ -91,11 +139,13 @@ function soundToggle() {
 }
 
 function openFile(fname) {
-    estyjs.openFloppyFile('A', fname);
+    openFileInDrive(fname, 'A');
 }
 
 function openFileInDrive(fname,drive) {
-	estyjs.openFloppyFile(drive, fname);
+	estyjs.openFloppyFile(drive, fname, function (result) {
+		diskLoaded(drive, fname, result);
+	});
 }
 
 function changeJoystick() {

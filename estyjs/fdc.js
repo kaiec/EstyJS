@@ -436,7 +436,9 @@ EstyJs.fdc = function (opts) {
         return status;
     }
 
-    self.loadFile = function (drive, filename) {
+    // The load is asynchronous, so whether the file turned out to be a disk at
+    // all is only known later: callback is how the caller gets told.
+    self.loadFile = function (drive, filename, callback) {
         var target = drives[drive];
         if (target == null) return;
 
@@ -452,6 +454,16 @@ EstyJs.fdc = function (opts) {
                 bug.say("drive " + drive + ": " + disk.format + " image, " + disk.tracks +
                         " tracks, " + disk.sides + " side(s), " + disk.sectorsPerTrack +
                         " sectors per track");
+            }
+
+            if (callback) {
+                callback(disk == null ? { ok: false } : {
+                    ok: true,
+                    format: disk.format,
+                    tracks: disk.tracks,
+                    sides: disk.sides,
+                    sectorsPerTrack: disk.sectorsPerTrack
+                });
             }
         });
     }
