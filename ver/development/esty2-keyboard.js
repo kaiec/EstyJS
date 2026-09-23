@@ -61,22 +61,21 @@ var EstyKeyboard = (function () {
     // The three blocks, in quarter key widths. r: 2 is a tall key (Return,
     // keypad Enter).
     var MAIN = [
-        [{ pad: 4 }, { s: 0x3B, w: 6 }, { s: 0x3C, w: 6 }, { s: 0x3D, w: 6 }, { s: 0x3E, w: 6 },
-         { s: 0x3F, w: 6 }, { s: 0x40, w: 6 }, { s: 0x41, w: 6 }, { s: 0x42, w: 6 },
-         { s: 0x43, w: 6 }, { s: 0x44, w: 6 }],
+        { flex: true, keys: [{ s: 0x3B }, { s: 0x3C }, { s: 0x3D }, { s: 0x3E }, { s: 0x3F },
+                             { s: 0x40 }, { s: 0x41 }, { s: 0x42 }, { s: 0x43 }, { s: 0x44 }] },
         [{ s: 0x01 }, { s: 0x02 }, { s: 0x03 }, { s: 0x04 }, { s: 0x05 }, { s: 0x06 }, { s: 0x07 },
          { s: 0x08 }, { s: 0x09 }, { s: 0x0A }, { s: 0x0B }, { s: 0x0C }, { s: 0x0D }, { s: 0x29 },
          { s: 0x0E, w: 8 }],
         [{ s: 0x0F, w: 6 }, { s: 0x10 }, { s: 0x11 }, { s: 0x12 }, { s: 0x13 }, { s: 0x14 },
          { s: 0x15 }, { s: 0x16 }, { s: 0x17 }, { s: 0x18 }, { s: 0x19 }, { s: 0x1A }, { s: 0x1B },
-         { s: 0x1C, w: 6, r: 2 }, { s: 0x53 }],
-        [{ s: 0x1D, w: 10 }, { s: 0x1E }, { s: 0x1F }, { s: 0x20 }, { s: 0x21 }, { s: 0x22 },
+         { s: 0x1C, w: 5, blank: true }, { s: 0x53, w: 5 }],
+        [{ s: 0x1D, w: 7 }, { s: 0x1E }, { s: 0x1F }, { s: 0x20 }, { s: 0x21 }, { s: 0x22 },
          { s: 0x23 }, { s: 0x24 }, { s: 0x25 }, { s: 0x26 }, { s: 0x27 }, { s: 0x28 },
-         { skip: 6 }, { s: 0x2B }],
-        [{ s: 0x2A, w: 6 }, { s: 0x60 }, { s: 0x2C }, { s: 0x2D }, { s: 0x2E }, { s: 0x2F },
+         { s: 0x1C, w: 8, cont: true }, { s: 0x2B, w: 5 }],
+        [{ s: 0x2A, w: 5 }, { s: 0x60 }, { s: 0x2C }, { s: 0x2D }, { s: 0x2E }, { s: 0x2F },
          { s: 0x30 }, { s: 0x31 }, { s: 0x32 }, { s: 0x33 }, { s: 0x34 }, { s: 0x35 },
-         { s: 0x36, w: 14 }],
-        [{ s: 0x38, w: 10 }, { s: 0x39, w: 44 }, { s: 0x3A, w: 10 }]
+         { s: 0x36, w: 15 }],
+        [{ pad: 4 }, { s: 0x38, w: 8 }, { s: 0x39, w: 40 }, { s: 0x3A, w: 8 }, { pad: 4 }]
     ];
 
     var MIDDLE = [
@@ -94,7 +93,7 @@ var EstyKeyboard = (function () {
     ];
 
     var country = 'us';
-    var keyElements = {};     // scancode -> element
+    var keyElements = {};     // scancode -> elements (Return has two)
     var held = {};            // scancode -> true, for keys held by the pointer
     var root = null;
     var status = null;
@@ -107,13 +106,20 @@ var EstyKeyboard = (function () {
         var legend = LEGENDS[country][scancode];
         if (!legend) return ['', ''];
 
-        return [legend[0] || '', legend[1] || ''];
+        var plain = legend[0] || '';
+        var shifted = legend[1] || '';
+
+        //letters carry their upper case only, as the keycaps do
+        if (shifted && plain && shifted === plain.toUpperCase()) return [shifted, ''];
+
+        return [plain, shifted];
     }
 
     function label(element, scancode) {
-        var legend = legendFor(scancode);
+        var legend = element.classList.contains('kb-blank') ? ['', ''] : legendFor(scancode);
 
         element.innerHTML = '';
+        element.classList.toggle('two', !!legend[1]);
         if (legend[1]) {
             var shifted = document.createElement('span');
             shifted.className = 'shifted';
@@ -121,7 +127,8 @@ var EstyKeyboard = (function () {
             element.appendChild(shifted);
         }
         var plain = document.createElement('span');
-        plain.className = NAMES[scancode] !== undefined ? 'named' : 'plain';
+        //a word is set small, a single glyph such as an arrow is not
+        plain.className = legend[0].length > 1 ? 'named' : 'plain';
         plain.textContent = legend[0];
         element.appendChild(plain);
 
@@ -136,22 +143,38 @@ var EstyKeyboard = (function () {
         for (var r = 0; r < rows.length; r++) {
             var column = 1;
 
-            for (var i = 0; i < rows[r].length; i++) {
-                var key = rows[r][i];
+            //a flex row fills the block, whatever the column count is
+            var flexRow = null;
+            if (rows[r].flex) {
+                flexRow = document.createElement('div');
+                flexRow.className = 'kb-fnrow';
+                flexRow.style.gridRow = (firstRow + r);
+                flexRow.style.gridColumn = '1 / -1';
+                grid.appendChild(flexRow);
+            }
+
+            var keys = flexRow ? rows[r].keys : rows[r];
+
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
                 var width = key.w || 4;
 
                 if (key.pad || key.skip) { column += (key.pad || key.skip); continue; }
 
                 var element = document.createElement('button');
                 element.type = 'button';
-                element.className = 'kb-key';
-                element.style.gridColumn = column + ' / span ' + width;
-                element.style.gridRow = (firstRow + r) + ' / span ' + (key.r || 1);
+                if (flexRow) { element.className = 'kb-key kb-fn'; }
+                else {
+                    element.className = 'kb-key' + (key.cont ? ' kb-cont' : '') +
+                                        (key.blank ? ' kb-blank kb-joined' : '');
+                    element.style.gridColumn = column + ' / span ' + width;
+                    element.style.gridRow = (firstRow + r) + ' / span ' + (key.r || 1);
+                }
                 element.dataset.scancode = key.s;
                 label(element, key.s);
 
-                grid.appendChild(element);
-                keyElements[key.s] = element;
+                (flexRow || grid).appendChild(element);
+                (keyElements[key.s] = keyElements[key.s] || []).push(element);
                 column += width;
             }
         }
@@ -162,23 +185,34 @@ var EstyKeyboard = (function () {
     // A US ST has no key between the left shift and Z, and a wider shift
     // instead. The country tables say which is which.
     function relabel() {
-        for (var scancode in keyElements) label(keyElements[scancode], parseInt(scancode, 10));
+        for (var scancode in keyElements)
+            keyElements[scancode].forEach(function (element) {
+                label(element, parseInt(scancode, 10));
+            });
 
         var iso = keyElements[0x60];
         var leftShift = keyElements[0x2A];
         var hasIso = LEGENDS[country][0x60] !== undefined;
 
-        if (iso) iso.style.display = hasIso ? '' : 'none';
-        if (leftShift) leftShift.style.gridColumn = '1 / span ' + (hasIso ? 6 : 10);
+        if (iso) iso[0].style.display = hasIso ? '' : 'none';
+        if (leftShift) leftShift[0].style.gridColumn = '1 / span ' + (hasIso ? 5 : 9);
     }
 
     /* ---------------------------------------------------------- the keys */
+
+    // window.estyjs is the emulator once the page has built it. The page also
+    // has a div with that id, which the browser exposes under the same name, so
+    // the methods are what is checked for.
+    function emulator() {
+        return (window.estyjs && typeof window.estyjs.pressKey === 'function') ? window.estyjs : null;
+    }
 
     function press(scancode) {
         if (held[scancode]) return;
         held[scancode] = true;
         show(scancode, true);
-        if (window.estyjs) estyjs.pressKey(scancode);
+        var esty = emulator();
+        if (esty) esty.pressKey(scancode);
         report(null, scancode, true);
     }
 
@@ -186,7 +220,8 @@ var EstyKeyboard = (function () {
         if (!held[scancode]) return;
         delete held[scancode];
         show(scancode, false);
-        if (window.estyjs) estyjs.releaseKey(scancode);
+        var esty = emulator();
+        if (esty) esty.releaseKey(scancode);
     }
 
     function releaseAll() {
@@ -194,8 +229,8 @@ var EstyKeyboard = (function () {
     }
 
     function show(scancode, down) {
-        var element = keyElements[scancode];
-        if (element) element.classList.toggle('down', down);
+        var elements = keyElements[scancode];
+        if (elements) elements.forEach(function (element) { element.classList.toggle('down', down); });
     }
 
     // The last key, in ST terms.
@@ -243,6 +278,16 @@ var EstyKeyboard = (function () {
 
         var keyboard = document.createElement('div');
         keyboard.className = 'kb-keyboard';
+
+        //where the machine carries its own badge
+        var badge = document.createElement('div');
+        badge.className = 'kb-badge';
+        var mark = document.createElement('img');
+        mark.src = 'img/logo.png';
+        mark.alt = 'EstyJS';
+        badge.appendChild(mark);
+        keyboard.appendChild(badge);
+
         keyboard.appendChild(block(MAIN, 64, 1));
         keyboard.appendChild(block(MIDDLE, 12, 2));
         keyboard.appendChild(block(KEYPAD, 16, 2));
@@ -270,19 +315,18 @@ var EstyKeyboard = (function () {
         document.addEventListener('pointercancel', releaseAll);
         window.addEventListener('blur', releaseAll);
 
-        //follow the host keyboard
-        if (window.estyjs) estyjs.setKeyListener(function (scancode, down, physicalKey) {
-            show(scancode, down);
-            report(physicalKey, scancode, down);
-        });
+        self.listen();
     };
 
     // The emulator is built after the page loads.
     self.listen = function () {
-        if (window.estyjs && root) estyjs.setKeyListener(function (scancode, down, physicalKey) {
-            show(scancode, down);
-            report(physicalKey, scancode, down);
-        });
+        var esty = emulator();
+        if (esty && root && typeof esty.setKeyListener === 'function') {
+            esty.setKeyListener(function (scancode, down, physicalKey) {
+                show(scancode, down);
+                report(physicalKey, scancode, down);
+            });
+        }
     };
 
     return self;

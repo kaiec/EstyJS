@@ -22,22 +22,29 @@ function blockOf(name, width) {
     if (!m) throw new Error('no ' + name + ' in esty2-keyboard.js');
 
     // each [ ... ] inside is one row
-    const rows = m[1].match(/\[[^\[\]]*\]/g) || [];
+    // a row written as { flex: true, keys: [...] } fills the block, so its key
+    // widths are not fixed and are not summed
+    const rows = (m[1].match(/\[[^\[\]]*\]/g) || []).map(row => ({
+        row, flex: m[1].includes('flex: true, keys: ' + row)
+    }));
     return {
         name, width,
-        rows: rows.map(row => {
+        rows: rows.map(entry => {
             const keys = [];
-            for (const k of row.match(/\{[^}]*\}/g) || []) {
+            keys.flex = entry.flex;
+            for (const k of entry.row.match(/\{[^}]*\}/g) || []) {
                 const scancode = k.match(/s:\s*(0x[0-9A-Fa-f]+)/);
                 const w = k.match(/w:\s*(\d+)/);
                 const pad = k.match(/(?:pad|skip):\s*(\d+)/);
                 const reserves = /skip:/.test(k);
+                const cont = /cont:\s*true/.test(k);
                 const rows = k.match(/r:\s*(\d+)/);
                 keys.push({
                     s: scancode ? parseInt(scancode[1], 16) : null,
                     w: pad ? parseInt(pad[1], 10) : (w ? parseInt(w[1], 10) : 4),
                     spacer: !!pad,
                     reserves: reserves,
+                    cont: cont,
                     rows: rows ? parseInt(rows[1], 10) : 1
                 });
             }
@@ -54,6 +61,7 @@ const fail = (m) => { console.log('FAIL ' + m); failed++; };
 // under a tall key (Return, keypad Enter) is short by exactly that key's width.
 for (const block of blocks) {
     block.rows.forEach((row, i) => {
+        if (row.flex) return;
         let width = row.reduce((sum, k) => sum + k.w, 0);
 
         // a row that already reserves the space with a skip has counted it
@@ -78,7 +86,8 @@ for (const block of blocks)
     for (const row of block.rows)
         for (const key of row)
             if (!key.spacer && key.s !== null) {
-                if (seen[key.s]) fail('scancode 0x' + key.s.toString(16) + ' appears more than once');
+                // a key drawn in two halves, such as Return, is one key
+                if (seen[key.s] && !key.cont) fail('scancode 0x' + key.s.toString(16) + ' appears more than once');
                 seen[key.s] = true;
             }
 
