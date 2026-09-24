@@ -156,6 +156,19 @@ function createMachine(estyDir, opts = {}) {
 
     machine.reset = function () { vm.runInContext('esty.reset();', sandbox); return machine; };
 
+    // rom is a path; the machine reads it through the same route as the page
+    machine.changeTOS = function (rom) {
+        const url = '__tos__';
+        machine.files[url] = fs.readFileSync(rom);
+        vm.runInContext(`esty.changeTOS("${url}");`, sandbox);
+        return machine;
+    };
+
+    machine.setMonoMonitor = function (mono) {
+        vm.runInContext('esty.setMonoMonitor(' + (mono ? 'true' : 'false') + ');', sandbox);
+        return machine;
+    };
+
     // --- mouse -------------------------------------------------------------
     // EstyJS sends *relative* movement to the ST, derived from the difference
     // between successive mousemove positions. So we park the pointer in the

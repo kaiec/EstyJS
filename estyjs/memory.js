@@ -59,6 +59,9 @@ EstyJs.Memory = function (opts) {
     //called with the country of a ROM once it has loaded
     self.onTos = null;
 
+    //called once a ROM has been loaded, for the machine to restart on
+    self.onRom = null;
+
     function load_binary_resource(url) {
 
         var oReq = new XMLHttpRequest();
@@ -84,7 +87,7 @@ EstyJs.Memory = function (opts) {
         romDataView = new DataView(rom);
         self.loaded=1;
         readTosHeader();
-        estyjs.reset()
+        if (self.onRom) self.onRom();
     }
 
 

@@ -113,6 +113,15 @@ EstyJs.Display = function (opts) {
                 paletteConverted[i] = (((r << 4) | r)) | (((g << 4) | g) << 8) | (((b << 4) | b) << 16) | 0xff000000;
             }
         }
+
+        //A monochrome monitor is fed one signal, not three, so the palette
+        //holds no colour in high resolution. Only the lowest bit of colour 0
+        //is used, and it says which of the two pixel values is black.
+        if ((screenMode & 3) == 2) {
+            var black = readPaletteValue(0) & 1;
+            paletteConverted[black] = bigEndian ? 0x000000ff : 0xff000000;
+            paletteConverted[black ^ 1] = 0xffffffff;
+        }
     }
 
     function optimisedScreenDraw() {
