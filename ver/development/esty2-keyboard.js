@@ -314,7 +314,7 @@ var EstyKeyboard = (function () {
 
         status = document.createElement('div');
         status.className = 'kb-status';
-        status.textContent = 'Press a key to see where it lands, or click one to send it to the ST.';
+        status.textContent = '';
 
         root.appendChild(chooser);
         root.appendChild(keyboard);
