@@ -44,6 +44,24 @@ EstyJs.Memory = function (opts) {
 
     self.loaded = 0;
 
+    var tosCountry = 0;
+
+    //os_conf in the TOS header: country in bits 1-15, video mode in bit 0
+    function readTosHeader() {
+        tosCountry = romDataView.getUint16(0x1c) >>> 1;
+        if (self.onTos) self.onTos(tosCountry);
+    }
+
+    self.getTosCountry = function () {
+        return tosCountry;
+    }
+
+    //called with the country of a ROM once it has loaded
+    self.onTos = null;
+
+    //called once a ROM has been loaded, for the machine to restart on
+    self.onRom = null;
+
     function load_binary_resource(url) {
 
         var oReq = new XMLHttpRequest();
@@ -56,6 +74,7 @@ EstyJs.Memory = function (opts) {
                 rom = arrayBuffer;
                 romDataView = new DataView(rom);
                 self.loaded=1;
+                readTosHeader();
             }
         };
 
@@ -67,7 +86,8 @@ EstyJs.Memory = function (opts) {
         rom = arrayBuffer;
         romDataView = new DataView(rom);
         self.loaded=1;
-        estyjs.reset()
+        readTosHeader();
+        if (self.onRom) self.onRom();
     }
 
 

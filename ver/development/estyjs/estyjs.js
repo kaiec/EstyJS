@@ -141,6 +141,11 @@ function EstyJs(output) {
 	fdc.setMemory(memory);
 	io.setDisplay(display);
 	processor.setup();
+
+	//a new ROM starts the machine again, once it has loaded
+	memory.onRom = function () {
+		self.reset();
+	};
 	sound.setProcessor(processor);
 	memory.setProcessor(processor);
 
@@ -220,7 +225,6 @@ function EstyJs(output) {
 
 	self.changeTOS = function (file) {
 		memory.changeTOS(file);
-		this.reset()
 	}
 
 	self.openSnapshotFile = function (file) {
@@ -252,6 +256,16 @@ function EstyJs(output) {
 		}
 
 		fileManager.getZipFilenames(file, zipCallback);
+	}
+
+	// The country of the loaded TOS, so that the on screen keyboard can show the
+	// keycaps that go with it.
+	self.getTosCountry = function () {
+		return memory.getTosCountry();
+	}
+
+	self.setTosListener = function (listener) {
+		memory.onTos = listener;
 	}
 
 	// For the on screen keyboard.
