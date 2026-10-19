@@ -65,14 +65,14 @@ function diskLoaded(drive, name, result) {
 }
 
 function diskSelected(evt, drive) {
-	var files = evt.target.files;
+	var file = evt.target.files[0];
 
+	//after taking the file, which Chrome drops from the list with the value;
 	//so that picking the same file twice is not ignored
 	evt.target.value = '';
 
-	if (files.length == 0) return;
+	if (file == null) return;
 
-	var file = files[0];
 	var ext = extensionOf(file.name);
 
 	function loaded(result) {
@@ -94,13 +94,11 @@ function diskSelected(evt, drive) {
 }
 
 function tosSelected(evt) {
-	var files = evt.target.files;
+	var file = evt.target.files[0];
 
 	evt.target.value = '';
 
-	if (files.length == 0) return;
-
-	var file = files[0];
+	if (file == null) return;
 
 	if (extensionOf(file.name) == '.img') {
 		estyjs.changeTOS(file);
