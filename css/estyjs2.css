@@ -138,12 +138,12 @@ canvas
    with a lighter top face, dark legends. The function keys are slanted, as
    they are on the machine and on the buttons above. */
 
-#keyboardpanel, #gamepadpanel {
+#keyboardpanel, #gamepadpanel, #statepanel {
 	margin: 0px 0px 20px 60px;
 	width: 940px;
 }
 
-#keyboardpanel > summary, #gamepadpanel > summary {
+#keyboardpanel > summary, #gamepadpanel > summary, #statepanel > summary {
 	cursor: pointer;
 	font-size: 18px;
 	padding: 4px 0px;
@@ -151,7 +151,7 @@ canvas
 	width: max-content;
 }
 
-#keyboardpanel > summary:hover, #gamepadpanel > summary:hover {
+#keyboardpanel > summary:hover, #gamepadpanel > summary:hover, #statepanel > summary:hover {
 	color: #000000;
 }
 
@@ -425,7 +425,7 @@ button.kb-key.kb-cont, button.kb-key.kb-cont.down {
 	display: none;
 }
 
-button.gp-button {
+button.gp-button, button.st-button {
 	font-family: 'nostalgie';
 	font-weight: 800;
 	font-size: 13px;
@@ -442,4 +442,77 @@ button.gp-button {
 
 button.gp-button[hidden] {
 	display: none;
+}
+
+button.st-button:disabled {
+	cursor: default;
+	color: #9a9a92;
+}
+
+/* ---- saved states ---- */
+
+.st-tools {
+	margin: 12px 0px;
+}
+
+.st-usage {
+	margin-left: 10px;
+	font-size: 14px;
+	color: #555555;
+}
+
+.st-list {
+	list-style: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.st-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 8px 0px;
+	border-top: 1px solid #d4d4d2;
+}
+
+.st-thumb {
+	background: #000000;
+	flex: none;
+}
+
+.st-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.st-name {
+	font-family: inherit;
+	width: 100%;
+	box-sizing: border-box;
+	font-size: 16px;
+	padding: 3px 4px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: #333333;
+}
+
+.st-name:hover, .st-name:focus {
+	border-color: #8f9082;
+	background: #ffffff;
+}
+
+.st-meta {
+	margin: 4px 5px 0px;
+	font-size: 14px;
+	color: #555555;
+}
+
+.st-meta.problem {
+	color: #a02000;
+}
+
+.st-empty {
+	font-size: 16px;
+	color: #555555;
+	padding: 8px 0px;
 }

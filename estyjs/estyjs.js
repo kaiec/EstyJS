@@ -274,6 +274,16 @@ function EstyJs(output) {
 		firstFrame = false;
 	}
 
+	// What saveState writes. restoreState refuses other formats.
+	self.getStateFormat = function () {
+		return snapshot.FORMAT;
+	}
+
+	// After restoreState, for a page where nothing is held any more.
+	self.releaseHostInput = function () {
+		keyboard.releaseHostInput();
+	}
+
 	self.openFloppyFile = function (drive, file, callback) {
 		fdc.loadFile(drive, file, callback);
 	}

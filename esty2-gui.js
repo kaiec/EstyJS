@@ -31,6 +31,9 @@ function diskMessage(text, isProblem) {
 	el.className = isProblem ? 'problem' : '';
 }
 
+// File name of the disk in each drive, for the saved states.
+var driveNames = { A: null, B: null };
+
 function showDrive(drive, inserted) {
 	var img = document.querySelector(drive == 'B' ? '#floppy-2' : '#floppy-1');
 	if (img != null) img.src = inserted ? 'img/floppy-active.png' : 'img/floppy-empty.png';
@@ -56,9 +59,11 @@ function diskLoaded(drive, name, result) {
 	}
 
 	if (result && result.ok) {
+		driveNames[drive] = name;
 		showDrive(drive, true);
 		diskMessage('Drive ' + drive + ': ' + name + ' (' + describeDisk(result) + ')', false);
 	} else {
+		driveNames[drive] = null;
 		showDrive(drive, false);
 		diskMessage('Drive ' + drive + ' is empty: ' + name +
 		            ' is not a disk image EstyJS can read.', true);
@@ -129,32 +134,6 @@ function showMonitor() {
         document.querySelector("#screen").style.backgroundImage = "url('img/sm124-sc-bg.png')";
         
     }
-}
-
-// One state, kept until the page is reloaded.
-var savedState = null;
-
-function saveState() {
-	savedState = estyjs.saveState();
-	document.querySelector('#btnLoadState').disabled = false;
-	diskMessage('Saved the state (' + Math.round(savedState.machine.byteLength / 1024) +
-	            ' KB), kept until the page is reloaded.', false);
-}
-
-function loadState() {
-	if (savedState == null) return;
-
-	try {
-		estyjs.restoreState(savedState);
-	} catch (e) {
-		diskMessage('Could not load the state: ' + e.message, true);
-		return;
-	}
-
-	showMonitor();
-	showDrive('A', savedState.disks.A != null);
-	showDrive('B', savedState.disks.B != null);
-	diskMessage('Loaded the saved state.', false);
 }
 
 // Cursor keys and control are joystick 1 while this is on. The label says what

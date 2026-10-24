@@ -94,6 +94,20 @@ EstyJs.Keyboard = function (opts) {
 
     var dataOut = new Array();
 
+    // Scancodes sent as pressed and not yet released.
+    var keysDown = new Array();
+
+    function sendMake(keyCode) {
+        if (keysDown.indexOf(keyCode) < 0) keysDown.push(keyCode);
+        dataOut.push(keyCode);
+    }
+
+    function sendBreak(keyCode) {
+        var i = keysDown.indexOf(keyCode);
+        if (i >= 0) keysDown.splice(i, 1);
+        dataOut.push(0x80 | keyCode);
+    }
+
     var locked = false;
 
     var readData = 0;
@@ -307,7 +321,16 @@ EstyJs.Keyboard = function (opts) {
         return true;
     }
 
+    // Keys typed into a text field of the page are not for the ST.
+    function intoField(evt) {
+        var t = evt.target;
+        if (t == null) return false;
+        if (t.isContentEditable || t.tagName == 'TEXTAREA') return true;
+        return t.tagName == 'INPUT' && /^(text|search|url|email|number|password)$/.test(t.type);
+    }
+
     function keyDown(evt) {
+        if (intoField(evt)) return;
         if (self.active) {
             //TOS repeats held keys, the keyboard does not; browser repeats
             //would be make codes without a break
@@ -368,10 +391,12 @@ EstyJs.Keyboard = function (opts) {
             }
 
         } else {
-            dataOut.push(keyCode)
+            sendMake(keyCode);
         }
     }
     function keyUp(evt) {
+        //a key pressed before the field got the focus is still released
+        if (intoField(evt) && keysDown.indexOf(stScancodes[evt.code]) < 0) return;
         registerKeyUp(evt.code);
         if (self.active && !evt.metaKey) return false;
     }
@@ -427,21 +452,39 @@ EstyJs.Keyboard = function (opts) {
             }
 
         } else {
-            dataOut.push(0x80 | keyCode)
+            sendBreak(keyCode);
         }
     }
 
     function keyPress(evt) {
+        if (intoField(evt)) return;
         if (self.active && !evt.metaKey) return false;
     }
 
     // An ST key with no host key involved, for the on screen keyboard.
     self.pressKey = function (scancode) {
-        if (scancode) dataOut.push(scancode & 0x7f);
+        if (scancode) sendMake(scancode & 0x7f);
     }
 
     self.releaseKey = function (scancode) {
-        if (scancode) dataOut.push(0x80 | (scancode & 0x7f));
+        if (scancode) sendBreak(scancode & 0x7f);
+    }
+
+    // After loading a state: the host holds none of the keys, mouse buttons
+    // and joystick directions that were held when it was saved.
+    self.releaseHostInput = function () {
+        while (keysDown.length) sendBreak(keysDown[0]);
+
+        leftDown = false;
+        rightDown = false;
+
+        if (joystickPos != 0) {
+            joystickPos = 0;
+            if (joystickMode == 'E' && !port0Mouse) {
+                dataOut.push(0xff);
+                dataOut.push(joystickPos);
+            }
+        }
     }
 
     // Called for every key the host sends: (scancode, down, physicalKey).
@@ -931,7 +974,7 @@ EstyJs.Keyboard = function (opts) {
             absLeftDownSinceLast: absLeftDownSinceLast, absLeftUpSinceLast: absLeftUpSinceLast,
             absRightDownSinceLast: absRightDownSinceLast, absRightUpSinceLast: absRightUpSinceLast,
             resetTime: resetTime,
-            dataOut: dataOut.slice(0),
+            dataOut: dataOut.slice(0), keysDown: keysDown.slice(0),
             readData: readData, writeData: writeData
         };
     }
@@ -954,6 +997,7 @@ EstyJs.Keyboard = function (opts) {
         absRightDownSinceLast = state.absRightDownSinceLast; absRightUpSinceLast = state.absRightUpSinceLast;
         resetTime = state.resetTime;
         dataOut = state.dataOut.slice(0);
+        keysDown = state.keysDown.slice(0);
         readData = state.readData; writeData = state.writeData;
     }
 

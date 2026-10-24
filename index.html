@@ -11,6 +11,7 @@
 	<script src="esty2-gui.js"></script>
 	<script src="esty2-keyboard.js"></script>
 	<script src="esty2-gamepad.js"></script>
+	<script src="esty2-states.js"></script>
 
 	<script src="estyjs/estyjs.js"></script>
 	<script src="estyjs/disk.js"></script>
@@ -24,6 +25,8 @@
 	<script src="estyjs/display.js"></script>
 	<script src="estyjs/memory.js"></script>
 	<script src="estyjs/snapshot.js"></script>
+	<script src="estyjs/zip.js"></script>
+	<script src="estyjs/store.js"></script>
 	<script src="estyjs/sound.js"></script>
 	<script src="estyjs/files.js"></script>
 	<script src="estyjs/js-unzip.js"></script>
@@ -44,6 +47,7 @@
 				estyjs.setRowSkip(false);
 				estyjs.setMonoMonitor(false);
 				EstyKeyboard.listen();
+				EstyStates.create('statepanel', 'statepanelbody');
 			});
 		});
 	</script>
@@ -74,8 +78,8 @@
 			<button onclick="pauseResume()" id="btnPause"><span>Pause</span></button>
 			<button onclick="soundToggle()" id="btnSound"><span>Sound on</span></button>
 			<button onclick="joystickToggle()" id="btnJoystick"><span>Joystick off</span></button>
-			<button onclick="saveState()" id="btnSaveState"><span>Save state</span></button>
-			<button onclick="loadState()" id="btnLoadState" disabled><span>Load state</span></button>
+			<button onclick="EstyStates.save()" id="btnSaveState"><span>Save state</span></button>
+			<button onclick="EstyStates.show()" id="btnLoadState"><span>Load state</span></button>
 			<input type="file" id="selectedTOS" accept=".img" style="display: none;">
 		</div>
 		<div id="floppies">
@@ -87,6 +91,11 @@
 		</div>
 
 		<div id="diskmessage" role="status" aria-live="polite"></div>
+
+		<details id="statepanel">
+			<summary>Saved states</summary>
+			<div id="statepanelbody"></div>
+		</details>
 
 
 		<div id="settings">
@@ -117,6 +126,8 @@
 			<li>Click the floppy drives to load a disk image (.st, .msa, .stx and .zip are
 				supported).</li>
 			<li>Click the ROM slot to use a different TOS image (.img) instead of EmuTOS.</li>
+			<li>Save state keeps the machine with its disks in the browser. Load state lists the
+				saved states.</li>
 			<li>Use the middle mouse button to realign the mouse pointer if necessary.</li>
 			<li>Joystick 1 is emulated using cursor keys and ctrl (or a real usb joypad). The
 				Joystick button switches this off.</li>
@@ -128,6 +139,7 @@
 		<h2>Documentation</h2>
 		<ul>
 			<li><a href="docs.html#using/disks">Disk images</a></li>
+			<li><a href="docs.html#using/states">Saved states</a></li>
 			<li><a href="docs.html#using/keyboard">Keyboard</a></li>
 			<li><a href="docs.html#using/joystick">Joystick</a></li>
 			<li><a href="docs.html#using/limitations">Limitations</a></li>
