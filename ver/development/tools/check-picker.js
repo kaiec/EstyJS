@@ -48,10 +48,10 @@ function check(what, got, want) {
 }
 
 // a disk that reads
-let c = makeContext({ ok: true, format: 'STX', tracks: 80, sides: 1 });
+let c = makeContext({ ok: true, format: 'STX', tracks: 80, sides: 1, writeProtected: true });
 c.sandbox.fileSelected(evt('Buggy Boy - Elite.stx'));
 check('good .stx message', c.els['#diskmessage'].textContent,
-      'Drive A: Buggy Boy - Elite.stx (STX, 80 tracks, single sided)');
+      'Drive A: Buggy Boy - Elite.stx (STX, 80 tracks, single sided, write protected)');
 check('good .stx marks drive full', c.els['#floppy-1'].src, 'img/floppy-active.png');
 check('good .stx not flagged', c.els['#diskmessage'].className, '');
 

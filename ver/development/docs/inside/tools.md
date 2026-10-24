@@ -4,9 +4,10 @@ Command line helpers in `tools/`, run from the repository root. Node only, no de
 part of the emulator and not served to the browser.
 
 `esty-headless.js` boots EstyJS under Node with the browser objects it touches stubbed out, and
-exposes `run(frames)`, `insertDisk`, `mouseTo`, `click`, `key`, `saveScreen` and `saveWrites`.
-Frames are pumped by hand, so runs are deterministic and about thirteen times faster than real time.
-The other tools are built on it.
+exposes `run(frames)`, `insertDisk`, `insertDiskBytes`, `getDiskBytes`, `getDiskInfo`, `mouseTo`,
+`click`, `key`, `saveScreen`, `saveWrites`, `saveState` and `restoreState`. Frames are pumped by hand, so runs are deterministic and about
+thirteen times faster than real time. The host clock is fixed and `Math.random` is seeded
+(`seedRandom`). The other tools are built on it.
 
 ## Publishing
 
@@ -40,6 +41,12 @@ action. GitHub Pages rebuilds on push.
     node tools/check-picker.js
     node tools/check-disks.js [--check known.json] <image>...
     node tools/check-joystick.js <disk>
+    node tools/check-states.js [--boot N] [--after N] [--desktop] [--512k] [--mono] <image>...
+    node tools/check-gamepad.js [disk]
+    node tools/check-write.js [--tos ROM] [image.stx]
+    node tools/check-store.js <disk> [--port N]
+    node tools/check-diskbox.js [image.stx] [--port N]
+    node tools/check-zip.js
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -65,6 +72,43 @@ against them, `--png DIR` writes the frames as raw RGBA.
 `check-joystick` measures the joystick switch through a game that responds to joystick 1 only: two
 identical machines, one key press, and whether the frames differ. Needs a disk that stops at a
 joystick prompt, such as Buggy Boy.
+
+`check-states` boots each image, saves the state and runs on. A fresh machine restores the state
+and runs the same frames with the same mouse, key and joystick input. Frame and state must come out
+the same, otherwise the first differing field is printed. The restoring machine starts as 1 MB with
+a colour monitor, so `--512k` and `--mono` check that a state carries both.
+
+`check-gamepad` reads made up gamepads through `estyjs/gamepad.js`: a standard one, a SNES style
+pad as Firefox reports it, one with a hat switch and one with the D-pad on buttons. Each is set up as
+the panel does it and read in every direction. With a disk such as Buggy Boy it also checks that
+the ST sees gamepad directions and fire as it sees cursor keys and control.
+
+`check-write` builds a 720 KB disk with `AUTO\TEST.PRG`, which creates a file through GEMDOS, waits
+three seconds and opens a file on a second disk swapped in meanwhile. Checks the written image as
+`.st` and `.msa`, a write protected disk, that TOS notices the disk change, and that a state
+carries the written disk. With an STX image it checks that the image is write protected. `--tos`
+boots another ROM (passes with EmuTOS, TOS 1.00 and 1.04).
+
+`check-store` and `check-diskbox` need `chromium`, since IndexedDB and WebGL do not exist under
+Node. `chromium.js` serves the working copy and drives the browser for both, `test-disk.js` builds
+the test disk for `check-write` and `check-diskbox`.
+
+`check-store` boots the disk in a fresh profile and saves, loads, renames, exports, deletes and
+imports states through the panel's functions. Checks that disks and ROM are stored once and that their
+blobs go with the last state using them, that a key held while saving is released after loading,
+that typing into the name field renames without the ST seeing the keys, and that a database set up
+by a newer EstyJS is reported.
+
+`check-diskbox` adds the test disk to the box through the file input, inserts it and resets the ST.
+The file its program creates has to reach the disk in the box once the drive light goes off. Then
+checks taking the disk out, a second box, a state holding the disk, that keys do not reach the ST
+while the box is open, and the file picker without WebGL2 or IndexedDB. An export of all boxes,
+imported again, has to give the same boxes, and a ZIP put together by hand the dividers and order
+the disk box page describes.
+
+`check-zip` writes and reads back archives with `estyjs/zip.js`, checks the deflated data and CRC
+against zlib, and reads an archive as macOS Finder writes it (data descriptors, folder entries,
+`__MACOSX`).
 
 ## Sound
 

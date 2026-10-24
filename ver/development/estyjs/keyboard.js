@@ -94,6 +94,20 @@ EstyJs.Keyboard = function (opts) {
 
     var dataOut = new Array();
 
+    // Scancodes sent as pressed and not yet released.
+    var keysDown = new Array();
+
+    function sendMake(keyCode) {
+        if (keysDown.indexOf(keyCode) < 0) keysDown.push(keyCode);
+        dataOut.push(keyCode);
+    }
+
+    function sendBreak(keyCode) {
+        var i = keysDown.indexOf(keyCode);
+        if (i >= 0) keysDown.splice(i, 1);
+        dataOut.push(0x80 | keyCode);
+    }
+
     var locked = false;
 
     var readData = 0;
@@ -307,7 +321,16 @@ EstyJs.Keyboard = function (opts) {
         return true;
     }
 
+    // Keys typed into a text field of the page are not for the ST.
+    function intoField(evt) {
+        var t = evt.target;
+        if (t == null) return false;
+        if (t.isContentEditable || t.tagName == 'TEXTAREA') return true;
+        return t.tagName == 'INPUT' && /^(text|search|url|email|number|password)$/.test(t.type);
+    }
+
     function keyDown(evt) {
+        if (intoField(evt)) return;
         if (self.active) {
             //TOS repeats held keys, the keyboard does not; browser repeats
             //would be make codes without a break
@@ -368,10 +391,23 @@ EstyJs.Keyboard = function (opts) {
             }
 
         } else {
-            dataOut.push(keyCode)
+            sendMake(keyCode);
         }
     }
+    // Whether the ST saw the key go down and waits for it to come up.
+    function heldBySt(physicalKey) {
+        var keyCode = stScancodes[physicalKey];
+        if (keyCode == null) return false;
+        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
+            return joystickPos != 0;
+        }
+        return keysDown.indexOf(keyCode) >= 0;
+    }
+
     function keyUp(evt) {
+        //a key that went down in a text field or while the keyboard was off is
+        //not released to the ST, one pressed before is
+        if ((intoField(evt) || !self.active) && !heldBySt(evt.code)) return;
         registerKeyUp(evt.code);
         if (self.active && !evt.metaKey) return false;
     }
@@ -427,67 +463,58 @@ EstyJs.Keyboard = function (opts) {
             }
 
         } else {
-            dataOut.push(0x80 | keyCode)
+            sendBreak(keyCode);
         }
     }
 
     function keyPress(evt) {
+        if (intoField(evt)) return;
         if (self.active && !evt.metaKey) return false;
     }
 
     // An ST key with no host key involved, for the on screen keyboard.
     self.pressKey = function (scancode) {
-        if (scancode) dataOut.push(scancode & 0x7f);
+        if (scancode) sendMake(scancode & 0x7f);
     }
 
     self.releaseKey = function (scancode) {
-        if (scancode) dataOut.push(0x80 | (scancode & 0x7f));
+        if (scancode) sendBreak(scancode & 0x7f);
+    }
+
+    // After loading a state: the host holds none of the keys, mouse buttons
+    // and joystick directions that were held when it was saved.
+    self.releaseHostInput = function () {
+        while (keysDown.length) sendBreak(keysDown[0]);
+
+        leftDown = false;
+        rightDown = false;
+
+        if (joystickPos != 0) {
+            joystickPos = 0;
+            if (joystickMode == 'E' && !port0Mouse) {
+                dataOut.push(0xff);
+                dataOut.push(joystickPos);
+            }
+        }
     }
 
     // Called for every key the host sends: (scancode, down, physicalKey).
     self.onKey = null;
 
     self.checkJoystick = function () {
-        var newJoystickPos = 0;
+        var gamepad = EstyJs.gamepad.first();
+        if (gamepad == null || EstyJs.gamepad.learning) return;
 
-        var gamepad = null;
-        if (navigator.getGamepads && navigator.getGamepads().length > 0) gamepad = navigator.getGamepads()[0];
+        var newJoystickPos = EstyJs.gamepad.read(gamepad);
 
-        if (gamepad != null) {
-            //up
-            if (gamepad.buttons.length > 12 && gamepad.buttons[12].pressed) newJoystickPos |= 1;
-            //down
-            if (gamepad.buttons.length > 13 && gamepad.buttons[13].pressed) newJoystickPos |= 2;
-            //left
-            if (gamepad.buttons.length > 14 && gamepad.buttons[14].pressed) newJoystickPos |= 4;
-            //right
-            if (gamepad.buttons.length > 15 && gamepad.buttons[15].pressed) newJoystickPos |= 8;
-
-            //up
-            if (gamepad.axes.length > 0 && gamepad.axes[1] < -0.5) newJoystickPos |= 1;
-            //down
-            if (gamepad.axes.length > 0 && gamepad.axes[1] > 0.5) newJoystickPos |= 2;
-            //left
-            if (gamepad.axes.length > 1 && gamepad.axes[0] < -0.5) newJoystickPos |= 4;
-            //right
-            if (gamepad.axes.length > 1 && gamepad.axes[0] > 0.5) newJoystickPos |= 8;
-
-            //any other fire buttons
-            for (var i = 0; i < 12; i++) {
-                if (gamepad.buttons.length > i && gamepad.buttons[i].pressed) newJoystickPos |= 128;
-            }
-
-            if (newJoystickPos != joystickPos) {
-                joystickPos = newJoystickPos
-                if (joystickMode == 'E' && !port0Mouse) {
-                    //fe = joystick 0, ff = joystick 1
-                    dataOut.push(0xff);
-                    dataOut.push(joystickPos)
-                }
+        if (newJoystickPos != joystickPos) {
+            joystickPos = newJoystickPos
+            if (joystickMode == 'E' && !port0Mouse) {
+                //fe = joystick 0, ff = joystick 1
+                dataOut.push(0xff);
+                dataOut.push(joystickPos)
             }
         }
-
-        
     }
 
     self.readkeys = function () {
@@ -936,6 +963,53 @@ EstyJs.Keyboard = function (opts) {
     self.setSnapshotRegs = function (regs) {
         mouseMode = regs.mouseMode;
         joystickMode = regs.joystickMode;
+    }
+
+    // ACIA and IKBD. Mouse, buttons and joystick are included, since the IKBD
+    // reports them as changes against what it last saw. Pointer lock and the
+    // joystick switch belong to the page.
+    self.getState = function () {
+        return {
+            joystickPos: joystickPos,
+            clearToSend: clearToSend, rxRegisterFull: rxRegisterFull,
+            txRegisterEmpty: txRegisterEmpty, interrupt: interrupt, control: control,
+            mouseMode: mouseMode, mouseAction: mouseAction, port0Mouse: port0Mouse,
+            mouseXmax: mouseXmax, mouseYmax: mouseYmax,
+            mouseXkey: mouseXkey, mouseYkey: mouseYkey,
+            mouseXthreshold: mouseXthreshold, mouseYthreshold: mouseYthreshold,
+            invertY: invertY, paused: paused, joystickMode: joystickMode,
+            keyCommands: keyCommands.slice(0),
+            oldMouseX: oldMouseX, oldMouseY: oldMouseY, mouseX: mouseX, mouseY: mouseY,
+            leftDown: leftDown, rightDown: rightDown,
+            oldLeftDown: oldLeftDown, oldRightDown: oldRightDown,
+            absLeftDownSinceLast: absLeftDownSinceLast, absLeftUpSinceLast: absLeftUpSinceLast,
+            absRightDownSinceLast: absRightDownSinceLast, absRightUpSinceLast: absRightUpSinceLast,
+            resetTime: resetTime,
+            dataOut: dataOut.slice(0), keysDown: keysDown.slice(0),
+            readData: readData, writeData: writeData
+        };
+    }
+
+    self.setState = function (state) {
+        joystickPos = state.joystickPos;
+        clearToSend = state.clearToSend; rxRegisterFull = state.rxRegisterFull;
+        txRegisterEmpty = state.txRegisterEmpty; interrupt = state.interrupt; control = state.control;
+        mouseMode = state.mouseMode; mouseAction = state.mouseAction; port0Mouse = state.port0Mouse;
+        mouseXmax = state.mouseXmax; mouseYmax = state.mouseYmax;
+        mouseXkey = state.mouseXkey; mouseYkey = state.mouseYkey;
+        mouseXthreshold = state.mouseXthreshold; mouseYthreshold = state.mouseYthreshold;
+        invertY = state.invertY; paused = state.paused; joystickMode = state.joystickMode;
+        keyCommands = state.keyCommands.slice(0);
+        oldMouseX = state.oldMouseX; oldMouseY = state.oldMouseY;
+        mouseX = state.mouseX; mouseY = state.mouseY;
+        leftDown = state.leftDown; rightDown = state.rightDown;
+        oldLeftDown = state.oldLeftDown; oldRightDown = state.oldRightDown;
+        absLeftDownSinceLast = state.absLeftDownSinceLast; absLeftUpSinceLast = state.absLeftUpSinceLast;
+        absRightDownSinceLast = state.absRightDownSinceLast; absRightUpSinceLast = state.absRightUpSinceLast;
+        resetTime = state.resetTime;
+        dataOut = state.dataOut.slice(0);
+        keysDown = state.keysDown.slice(0);
+        readData = state.readData; writeData = state.writeData;
     }
 
     self.resetMouse = function() {

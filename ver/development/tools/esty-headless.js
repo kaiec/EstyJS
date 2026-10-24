@@ -46,6 +46,25 @@ function createMachine(estyDir, opts = {}) {
         body: { addEventListener() {} }
     };
 
+    // Fuzzy bytes on STX disks read as Math.random(). A seeded generator makes
+    // them repeatable; see machine.seedRandom.
+    let seed = 1;
+    const math = Object.create(Math);
+    math.random = function () {
+        // mulberry32
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // The IKBD clock reads the host time. A fixed time makes runs repeatable.
+    const FIXED_TIME = Date.UTC(1987, 11, 24, 12, 0, 0);
+    class FixedDate extends Date {
+        constructor(...args) { super(...(args.length ? args : [FIXED_TIME])); }
+        static now() { return FIXED_TIME; }
+    }
+
     // Frames the emulator has scheduled but we have not run yet.
     const scheduled = [];
     let virtualMs = 0;
@@ -53,7 +72,7 @@ function createMachine(estyDir, opts = {}) {
     const sandbox = {
         console: opts.quiet ? { log() {}, warn() {}, error() {} } : console,
         document: doc,
-        navigator: { userAgent: 'node', getGamepads: () => [] },
+        navigator: { userAgent: 'node', getGamepads: () => machine.gamepads },
         performance: { now: () => virtualMs },
         setTimeout: (fn) => { scheduled.push(fn); return scheduled.length; },
         clearTimeout() {}, setInterval: () => 0, clearInterval() {},
@@ -68,7 +87,8 @@ function createMachine(estyDir, opts = {}) {
             };
         },
         Uint8Array, Uint8ClampedArray, Uint32Array, Int32Array, Float32Array,
-        DataView, ArrayBuffer, Math, Date, JSON, Object, Array, String, Number
+        DataView, ArrayBuffer, Math: math, Date: FixedDate, JSON, Object, Array, String, Number,
+        TextEncoder, TextDecoder
     };
     sandbox.window = { console: sandbox.console, performance: sandbox.performance };
     sandbox.window.window = sandbox.window;
@@ -76,13 +96,14 @@ function createMachine(estyDir, opts = {}) {
     vm.createContext(sandbox);
 
     machine.files = {};          // virtual URL -> Buffer  (disk images, ROM)
+    machine.gamepads = [];       // what navigator.getGamepads() returns
     machine.screen = null;
 
     // ------------------------------------------------------------- source ---
     // Everything except sound.js, which is replaced by the recorder below:
     // there is no audio hardware here, and the recording is the point.
     const SOURCES = ['estyjs.js', 'processor.js', 'keyboard.js', 'mfp.js',
-                     'disk.js', 'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
+                     'disk.js', 'gamepad.js', 'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
                      'snapshot.js', 'files.js', 'js-unzip.js', 'rawinflate.js'];
     for (const f of SOURCES) {
         const src = fs.readFileSync(path.join(estyDir, f), 'utf8').replace(/^﻿/, '');
@@ -105,6 +126,8 @@ function createMachine(estyDir, opts = {}) {
             processRow()  { row++; },
             endFrame()    { frame++; },
             reset() { regIndex = 0; regs.fill(0); },
+            getState() { return { regIndex, regs: new Uint8Array(regs) }; },
+            setState(s) { regIndex = s.regIndex; regs.set(s.regs); },
             setProcessor(p) { cpu = p; },
             init() {},
             selectRegister(v) { regIndex = v & 0xff; },
@@ -154,6 +177,48 @@ function createMachine(estyDir, opts = {}) {
         return machine;
     };
 
+    // bytes is a Buffer or Uint8Array, null ejects. Returns what fdc.insertDisk
+    // returns.
+    machine.insertDiskBytes = function (drive, bytes, writeProtected) {
+        sandbox.__bytes = bytes == null ? null : new Uint8Array(bytes).buffer;
+        const result = vm.runInContext(`esty.insertDisk("${drive}", __bytes, ${!!writeProtected});`, sandbox);
+        delete sandbox.__bytes;
+        return result;
+    };
+
+    machine.getDiskBytes = (drive) => vm.runInContext(`esty.getDiskBytes("${drive}");`, sandbox);
+    machine.getDiskInfo = (drive) => vm.runInContext(`esty.getDiskInfo("${drive}");`, sandbox);
+
+    // {machine, rom, disks}, as EstyJs.saveState returns it.
+    machine.saveState = function () {
+        return vm.runInContext('esty.saveState();', sandbox);
+    };
+
+    machine.restoreState = function (state) {
+        sandbox.__state = state;
+        vm.runInContext('esty.restoreState(__state);', sandbox);
+        delete sandbox.__state;
+        return machine;
+    };
+
+    machine.seedRandom = function (n) { seed = n | 0; return machine; };
+
+    // The machine part of a state as the tree of values it was encoded from.
+    machine.decodeState = function (buffer) {
+        sandbox.__buffer = buffer;
+        const state = vm.runInContext('EstyJs.SnapshotFile({}).decode(__buffer);', sandbox);
+        delete sandbox.__buffer;
+        return state;
+    };
+
+    // A layout as the gamepad panel sets it up, see estyjs/gamepad.js.
+    machine.setGamepadLayout = function (id, layout) {
+        sandbox.__layout = layout;
+        vm.runInContext('EstyJs.gamepad.setLayout(' + JSON.stringify(id) + ', __layout);', sandbox);
+        delete sandbox.__layout;
+        return machine;
+    };
+
     machine.reset = function () { vm.runInContext('esty.reset();', sandbox); return machine; };
 
     // rom is a path; the machine reads it through the same route as the page
@@ -161,6 +226,12 @@ function createMachine(estyDir, opts = {}) {
         const url = '__tos__';
         machine.files[url] = fs.readFileSync(rom);
         vm.runInContext(`esty.changeTOS("${url}");`, sandbox);
+        return machine;
+    };
+
+    // 1 MB when true, 512 KB when false, as the 1Meg box on the page.
+    machine.setMemory = function (oneMeg) {
+        vm.runInContext('esty.setMemory(' + (oneMeg ? 'true' : 'false') + ');', sandbox);
         return machine;
     };
 

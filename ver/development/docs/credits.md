@@ -12,4 +12,8 @@ Further credits:
 - **etos256us.img** and **etos192us.img** are EmuTOS 1.4 (US English), licensed under GPL V2, and no integral part of this project.
 - **Atari_1040STf-600.png** is adapted from [Bill Bertram](https://en.wikipedia.org/wiki/File:Atari_1040STf.jpg), licensed under CC-BY-SA 2.5.
 - **vendor/marked.min.js** is [marked](https://github.com/markedjs/marked) by Christopher Jeffrey and contributors, licensed under the MIT license, included unmodified.
+- **diskbox/geometry.json** is the disk box from a Blender model by Kai Eckert. The disk in it is
+  derived from [3.5 inch Floppy Disk](https://www.thingiverse.com/thing:6823032) by mygadgetlife,
+  licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (write protect knob
+  replaced by a slider, label added, simplified).
 - **Sporniket Nostalgie v2** is a font inspired from the Atari ST system font, created by [David Sporn](https://github.com/sporniket/Sporniket-Nostalgie-Sans), licensed under SIL OFL 1.1.

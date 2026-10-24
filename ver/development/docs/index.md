@@ -8,6 +8,8 @@ Runs here: [https://kaiec.github.io/EstyJS/](https://kaiec.github.io/EstyJS/)
 ## Using it
 
 - [Disk images](using/disks.md)
+- [Disk box](using/diskbox.md)
+- [Saved states](using/states.md)
 - [Keyboard](using/keyboard.md)
 - [Joystick](using/joystick.md)
 - [Limitations](using/limitations.md)

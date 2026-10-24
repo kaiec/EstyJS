@@ -166,5 +166,78 @@ EstyJs.SnapshotFile = function (opts) {
         fileManager.loadFile(file, processSnapshot);
     }
 
+    /* ------------------------------------------------- EstyJS machine state */
+
+    // A state is a tree of plain values and typed arrays. Stored as:
+    //   'ESTY'           4 bytes
+    //   format           uint32, little-endian
+    //   JSON length      uint32, little-endian
+    //   JSON             UTF-8, typed arrays replaced by {$type, $offset, $length}
+    //   typed arrays     their bytes, one after the other, in host byte order
+    self.FORMAT = 1;
+
+    var TYPES = { Uint8Array: Uint8Array, Int32Array: Int32Array, Uint32Array: Uint32Array };
+
+    self.encode = function (state) {
+        var chunks = [];
+        var size = 0;
+
+        var json = JSON.stringify(state, function (key, value) {
+            if (ArrayBuffer.isView(value)) {
+                var type = value.constructor.name;
+                if (!TYPES.hasOwnProperty(type)) throw new Error('state: cannot store ' + type);
+                var bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+                chunks.push(bytes);
+                size += bytes.length;
+                return { $type: type, $offset: size - bytes.length, $length: value.length };
+            }
+            return value;
+        });
+
+        var text = new TextEncoder().encode(json);
+        var out = new Uint8Array(12 + text.length + size);
+        var view = new DataView(out.buffer);
+
+        out.set([0x45, 0x53, 0x54, 0x59]);
+        view.setUint32(4, self.FORMAT, true);
+        view.setUint32(8, text.length, true);
+        out.set(text, 12);
+
+        var p = 12 + text.length;
+        for (var i = 0; i < chunks.length; i++) {
+            out.set(chunks[i], p);
+            p += chunks[i].length;
+        }
+
+        return out.buffer;
+    }
+
+    // Throws if the buffer is not a state in this format.
+    self.decode = function (buffer) {
+        var bytes = new Uint8Array(buffer);
+        var view = new DataView(buffer);
+
+        if (bytes.length < 12 || bytes[0] != 0x45 || bytes[1] != 0x53 ||
+            bytes[2] != 0x54 || bytes[3] != 0x59) throw new Error('state: not an EstyJS state');
+
+        var format = view.getUint32(4, true);
+        if (format != self.FORMAT) throw new Error('state: format ' + format + ', expected ' + self.FORMAT);
+
+        var length = view.getUint32(8, true);
+        var base = 12 + length;
+        var json = new TextDecoder().decode(bytes.subarray(12, base));
+
+        return JSON.parse(json, function (key, value) {
+            if (value != null && typeof value == 'object' && value.$type) {
+                var type = TYPES.hasOwnProperty(value.$type) ? TYPES[value.$type] : null;
+                if (type == null) throw new Error('state: unknown array type ' + value.$type);
+                var from = base + value.$offset;
+                return new type(buffer.slice(from, from + value.$length * type.BYTES_PER_ELEMENT));
+            }
+            return value;
+        });
+    }
+
+
     return self;
 }

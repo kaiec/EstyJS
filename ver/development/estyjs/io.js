@@ -131,6 +131,16 @@ EstyJs.io = function (opts) {
 
     }
 
+    self.getState = function () {
+        return { dmaModeControl: dmaModeControl, dmaAddr: dmaAddr, memConfig: memConfig };
+    }
+
+    self.setState = function (state) {
+        dmaModeControl = state.dmaModeControl;
+        dmaAddr = state.dmaAddr;
+        memConfig = state.memConfig;
+    }
+
     self.write = function (addr, val) {
 
         addr = addr & 0xffffff;

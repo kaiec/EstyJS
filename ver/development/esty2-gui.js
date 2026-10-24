@@ -31,6 +31,9 @@ function diskMessage(text, isProblem) {
 	el.className = isProblem ? 'problem' : '';
 }
 
+// File name of the disk in each drive, for the saved states.
+var driveNames = { A: null, B: null };
+
 function showDrive(drive, inserted) {
 	var img = document.querySelector(drive == 'B' ? '#floppy-2' : '#floppy-1');
 	if (img != null) img.src = inserted ? 'img/floppy-active.png' : 'img/floppy-empty.png';
@@ -43,7 +46,8 @@ function extensionOf(name) {
 
 function describeDisk(result) {
 	return result.format + ', ' + result.tracks + ' tracks, ' +
-	       (result.sides > 1 ? 'double sided' : 'single sided');
+	       (result.sides > 1 ? 'double sided' : 'single sided') +
+	       (result.writeProtected ? ', write protected' : '');
 }
 
 // A file counts as inserted once it has been read, which is after the picker
@@ -55,9 +59,11 @@ function diskLoaded(drive, name, result) {
 	}
 
 	if (result && result.ok) {
+		driveNames[drive] = name;
 		showDrive(drive, true);
 		diskMessage('Drive ' + drive + ': ' + name + ' (' + describeDisk(result) + ')', false);
 	} else {
+		driveNames[drive] = null;
 		showDrive(drive, false);
 		diskMessage('Drive ' + drive + ' is empty: ' + name +
 		            ' is not a disk image EstyJS can read.', true);
@@ -65,14 +71,14 @@ function diskLoaded(drive, name, result) {
 }
 
 function diskSelected(evt, drive) {
-	var files = evt.target.files;
+	var file = evt.target.files[0];
 
+	//after taking the file, which Chrome drops from the list with the value;
 	//so that picking the same file twice is not ignored
 	evt.target.value = '';
 
-	if (files.length == 0) return;
+	if (file == null) return;
 
-	var file = files[0];
 	var ext = extensionOf(file.name);
 
 	function loaded(result) {
@@ -94,19 +100,26 @@ function diskSelected(evt, drive) {
 }
 
 function tosSelected(evt) {
-	var files = evt.target.files;
+	var file = evt.target.files[0];
 
 	evt.target.value = '';
 
-	if (files.length == 0) return;
-
-	var file = files[0];
+	if (file == null) return;
 
 	if (extensionOf(file.name) == '.img') {
 		estyjs.changeTOS(file);
 		diskMessage('Using the ROM in ' + file.name + '.', false);
 	} else {
 		diskMessage('A ROM has to be a .img file.', true);
+	}
+}
+
+// The disk box where the browser can show it, the file picker otherwise.
+function driveClicked(drive) {
+	if (typeof EstyDiskbox != 'undefined' && EstyDiskbox.available) {
+		EstyDiskbox.open(drive);
+	} else {
+		document.getElementById(drive == 'B' ? 'selectedFileB' : 'selectedFile').click();
 	}
 }
 
@@ -120,6 +133,10 @@ function fileSelected2(evt) {
 
 function colorToggle() {
     estyjs.setMonoMonitor(!estyjs.getMonoMonitor());
+    showMonitor();
+}
+
+function showMonitor() {
     if (estyjs.getMonoMonitor()) {
         document.querySelector("#screen").style.backgroundImage = "url('img/sm124-bg.png')";
     } else {
