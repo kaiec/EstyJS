@@ -46,6 +46,7 @@ action. GitHub Pages rebuilds on push.
     node tools/check-write.js [--tos ROM] [image.stx]
     node tools/check-store.js <disk> [--port N]
     node tools/check-diskbox.js [image.stx] [--port N]
+    node tools/check-zip.js
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -101,7 +102,13 @@ by a newer EstyJS is reported.
 `check-diskbox` adds the test disk to the box through the file input, inserts it and resets the ST.
 The file its program creates has to reach the disk in the box once the drive light goes off. Then
 checks taking the disk out, a second box, a state holding the disk, that keys do not reach the ST
-while the box is open, and the file picker without WebGL2 or IndexedDB.
+while the box is open, and the file picker without WebGL2 or IndexedDB. An export of all boxes,
+imported again, has to give the same boxes, and a ZIP put together by hand the dividers and order
+the disk box page describes.
+
+`check-zip` writes and reads back archives with `estyjs/zip.js`, checks the deflated data and CRC
+against zlib, and reads an archive as macOS Finder writes it (data descriptors, folder entries,
+`__MACOSX`).
 
 ## Sound
 

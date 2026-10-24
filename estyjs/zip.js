@@ -30,8 +30,8 @@ Current maintainer (since 2024): Kai Eckert
 //
 // Written entries are deflated, or stored when deflating does not make them
 // smaller. Names are UTF-8. Reading goes through the central directory, so
-// archives with data descriptors (macOS Finder) read too. Folder entries are
-// left out.
+// archives with data descriptors (macOS Finder) read too. Folder entries and
+// what macOS adds (__MACOSX/, ._ files, .DS_Store) are left out.
 "use strict";
 
 EstyJs.zip = (function () {
@@ -159,7 +159,8 @@ EstyJs.zip = (function () {
             var name = (flags & UTF8 ? utf8 : latin1).decode(rawName);
             at += 46 + nameLength + skip;
 
-            if (name.charAt(name.length - 1) == '/') continue;
+            var base = name.split('/').pop();
+            if (base == '' || name.indexOf('__MACOSX/') == 0 || base.indexOf('._') == 0 || base == '.DS_Store') continue;
             if (method != 0 && method != 8) return Promise.reject(new Error(name + ': unknown compression'));
 
             var start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);

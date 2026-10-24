@@ -627,7 +627,8 @@ void main() {
         state.items = box.items.map(item => {
           if (item.disk != null) {
             const d = byId.get(item.disk);
-            return d ? Object.assign({ type: 'disk' }, d) : null;
+            // imported disks may come without colours
+            return d ? Object.assign({ type: 'disk' }, d, { accent: d.accent || ACCENT_COLORS[0], body: d.body || BODY_COLORS[0] }) : null;
           }
           return { type: 'sep', id: item.id || uid(), name: item.sep, side: item.side };
         }).filter(it => it);
@@ -668,6 +669,41 @@ void main() {
       .then(() => EstyJs.store.listBoxes())
       .then(all => all.length ? all[0].id : EstyJs.store.addBox('Disks'))
       .then(id => switchBox(id));
+  }
+
+  // ------------------------------------------------------------------ export and import
+  function download(bytes, name) {
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+    const a = el('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  function exportBoxes(all) {
+    flushTitle();
+    const ids = all ? boxes.map(b => b.id) : [boxId];
+    const name = all ? 'EstyJS disk boxes.zip' : boxTitle.replace(/[\\\/:*?"<>|]/g, '_') + '.zip';
+    enqueue(() => EstyJs.store.exportBoxes(ids)).then(zip => {
+      download(zip, name);
+      say('Exported ' + (all ? ids.length + (ids.length == 1 ? ' box' : ' boxes') : '"' + boxTitle + '"') + '.', false);
+    });
+  }
+
+  function importBoxes(file) {
+    file.arrayBuffer()
+      .then(buffer => enqueue(() => EstyJs.store.importBoxes(new Uint8Array(buffer), file.name)))
+      .then(result => {
+        const n = result.boxes.length;
+        say('Imported ' + n + (n == 1 ? ' box' : ' boxes') + ' with ' + result.disks +
+            (result.disks == 1 ? ' disk' : ' disks') + ' from ' + file.name + '.' +
+            (result.skipped ? ' Left out ' + result.skipped + (result.skipped == 1 ? ' file' : ' files') +
+                              ' that ' + (result.skipped == 1 ? 'is' : 'are') + ' no disk image.' : ''), false);
+        if (n) return switchBox(result.boxes[0], 0);
+      }).catch(e => say('Could not import ' + file.name + ': ' + e.message, true));
   }
 
   // ------------------------------------------------------------------ adding images
@@ -932,7 +968,18 @@ void main() {
     });
     title.addEventListener('keyup', e => { if (e.key == 'Enter') title.blur(); });
     const count = el('span', 'db-count');
-    head.append(boxesSelect, title, button('New box', newBox), button('Delete box', deleteBox), count,
+    const importInput = el('input');
+    importInput.type = 'file';
+    importInput.accept = '.zip';
+    importInput.hidden = true;
+    importInput.addEventListener('change', () => {
+      const f = importInput.files[0];
+      importInput.value = '';
+      if (f) importBoxes(f);
+    });
+    head.append(boxesSelect, title, button('New box', newBox), button('Delete box', deleteBox),
+                button('Export box', () => exportBoxes(false)), button('Export all', () => exportBoxes(true)),
+                button('Import', () => importInput.click()), importInput, count,
                 button('Close box', () => close(), 'db-close'));
 
     const body = el('div', 'db-body');

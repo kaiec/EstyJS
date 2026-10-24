@@ -626,6 +626,275 @@ EstyJs.store = (function () {
         });
     };
 
+    /* ----------------------------------------- box export and import */
+
+    // Version of box.json and the .json beside each disk.
+    var BOX_VERSION = 1;
+
+    var EXTENSIONS = { ST: '.st', MSA: '.msa', STX: '.stx' };
+
+    function extensionOf(name) {
+        var dot = name.lastIndexOf('.');
+        return dot < 0 ? '' : name.slice(dot).toLowerCase();
+    }
+
+    // A file or folder name from a label: no characters file systems refuse,
+    // and unique in its folder (taken holds the names used, in lower case).
+    function fileName(text, extension, taken) {
+        var base = (text || '').replace(/[\\\/:*?"<>|\x00-\x1f]/g, '_').replace(/[. ]+$/, '').trim();
+        base = (base || 'Disk').slice(0, 60);
+        var name = base + extension;
+        for (var n = 2; taken[name.toLowerCase()]; n++) name = base + ' (' + n + ')' + extension;
+        taken[name.toLowerCase()] = true;
+        return name;
+    }
+
+    function json(value) {
+        return new TextEncoder().encode(JSON.stringify(value, null, 1));
+    }
+
+    // A ZIP with a folder per box: box.json, the disk images named after
+    // their labels with a .json beside each, and a folder per divider holding
+    // the disks behind it. Unsorted disks sit in the box folder. box.json is
+    // { version, title, items }, items as in a box with paths for disk ids.
+    self.exportBoxes = function (ids) {
+        var files = [];
+        var boxNames = {};
+
+        return ids.reduce(function (chain, id) {
+            return chain.then(function () {
+                return Promise.all([self.getBox(id), self.listDisks(id)]);
+            }).then(function (r) {
+                var box = r[0];
+                var disks = {};
+                r[1].forEach(function (disk) { disks[disk.id] = disk; });
+
+                var folder = fileName(box.title, '', boxNames) + '/';
+                var taken = { '': {} };
+                var paths = {};
+                var dir = '';
+
+                // a disk belongs to the divider in front of it
+                for (var i = box.items.length - 1; i >= 0; i--) {
+                    var item = box.items[i];
+                    if (item.sep != null) {
+                        dir = fileName(item.sep, '', taken['']) + '/';
+                        taken[dir] = {};
+                        item.path = dir.slice(0, -1);
+                    } else if (disks[item.disk]) {
+                        var disk = disks[item.disk];
+                        var title = disk.title.split('\n')[0] || disk.name.replace(/\.[^.]+$/, '');
+                        paths[item.disk] = dir + fileName(title, EXTENSIONS[disk.format] || '.st', taken[dir]);
+                    }
+                }
+
+                var items = [];
+                box.items.forEach(function (item) {
+                    if (item.sep != null) items.push({ sep: item.sep, side: item.side, folder: item.path });
+                    else if (paths[item.disk]) items.push({ disk: paths[item.disk] });
+                });
+                files.push({ name: folder + 'box.json', bytes: json({ version: BOX_VERSION, title: box.title, items: items }) });
+
+                return r[1].reduce(function (chain, disk) {
+                    if (paths[disk.id] == null) return chain;
+                    return chain.then(function () {
+                        return self.getDiskBytes(disk.id);
+                    }).then(function (bytes) {
+                        var path = folder + paths[disk.id];
+                        files.push({ name: path, bytes: bytes });
+                        files.push({
+                            name: path.replace(/\.[^.\/]+$/, '.json'), bytes: json({
+                                version: BOX_VERSION, title: disk.title, hasLabel: disk.hasLabel,
+                                accent: disk.accent, body: disk.body, writeProtected: disk.writeProtected,
+                                name: disk.name, created: disk.created, modified: disk.modified
+                            })
+                        });
+                    });
+                }, Promise.resolve());
+            });
+        }, Promise.resolve()).then(function () {
+            return EstyJs.zip.write(files);
+        });
+    };
+
+    // entries from the back to the front: { sep, side } or { disk } with the
+    // disk as for addDisk. One transaction. Returns the id.
+    self.addBoxWithDisks = function (title, entries) {
+        var disks = entries.filter(function (e) { return e.disk; });
+
+        return Promise.all(disks.map(function (e) { return self.hash(e.disk.bytes); })).then(function (hashes) {
+            return self.open().then(function (d) {
+                persist();
+                var tx = d.transaction(['blobs', 'boxes', 'disks'], 'readwrite');
+                var boxes = tx.objectStore('boxes');
+                var store = tx.objectStore('disks');
+                var now = Date.now();
+
+                var counts = {};
+                disks.forEach(function (e, i) {
+                    if (counts[hashes[i]]) counts[hashes[i]].n++;
+                    else counts[hashes[i]] = { bytes: e.disk.bytes, n: 1 };
+                });
+                addRefs(tx.objectStore('blobs'), counts);
+
+                var boxId = null;
+                boxes.add({ title: title, items: [] }).onsuccess = function (e) {
+                    boxId = e.target.result;
+                    var items = [];
+                    var left = disks.length;
+                    var next = 0;
+
+                    function finish() {
+                        boxes.put({ id: boxId, title: title, items: items });
+                    }
+
+                    entries.forEach(function (entry, i) {
+                        if (entry.sep != null) {
+                            items[i] = { sep: entry.sep, side: entry.side == 'R' ? 'R' : 'L',
+                                         id: Math.random().toString(36).slice(2, 10) };
+                            return;
+                        }
+                        var disk = entry.disk;
+                        var record = {
+                            box: boxId, title: disk.title || '', hasLabel: disk.hasLabel !== false,
+                            accent: disk.accent, body: disk.body, writeProtected: !!disk.writeProtected,
+                            blob: hashes[next++], name: disk.name || '', format: disk.format || '',
+                            created: disk.created || now, modified: disk.modified || now
+                        };
+                        store.add(record).onsuccess = function (e) {
+                            items[i] = { disk: e.target.result };
+                            if (--left == 0) finish();
+                        };
+                    });
+                    if (left == 0) finish();
+                };
+                return done(tx).then(function () { return boxId; });
+            });
+        });
+    };
+
+    // Adds the boxes in a ZIP: one per top level folder, files outside a
+    // folder go into a box named after the ZIP. Without box.json the disks
+    // in the box folder are unsorted, and each folder below it becomes a
+    // divider with the disks behind it, in alphabetical order. Files that are
+    // no disk image EstyJS reads are left out. More than 60 items go on into
+    // a second box. Returns { boxes: [ids], disks, skipped }.
+    self.importBoxes = function (bytes, zipName) {
+        return EstyJs.zip.read(bytes).then(function (files) {
+            var groups = {};
+            var order = [];
+            var fallback = (zipName || 'Disks').replace(/\.zip$/i, '');
+
+            files.forEach(function (f) {
+                var parts = f.name.split('/');
+                var group = parts.length > 1 ? parts.shift() : fallback;
+                if (!groups[group]) { groups[group] = {}; order.push(group); }
+                groups[group][parts.join('/')] = f.bytes;
+            });
+
+            var result = { boxes: [], disks: 0, skipped: 0 };
+
+            function image(group, path) {
+                var b = groups[group][path];
+                if (b == null) return null;
+                var disk = EstyJs.diskImage.load(b.slice(0).buffer);
+                if (disk == null) { result.skipped++; return null; }
+
+                var meta = {};
+                var side = groups[group][path.replace(/\.[^.\/]+$/, '.json')];
+                if (side) {
+                    try { meta = JSON.parse(new TextDecoder().decode(side)); } catch (e) { meta = {}; }
+                }
+                var name = path.split('/').pop();
+                return {
+                    title: typeof meta.title == 'string' ? meta.title : name.replace(/\.[^.]+$/, ''),
+                    hasLabel: meta.hasLabel, accent: meta.accent, body: meta.body,
+                    writeProtected: meta.writeProtected || !disk.writable,
+                    name: meta.name || name, format: disk.format, bytes: b,
+                    created: meta.created, modified: meta.modified
+                };
+            }
+
+            function isImage(path) {
+                return ['.st', '.msa', '.stx'].indexOf(extensionOf(path)) >= 0;
+            }
+
+            function entriesOf(group) {
+                var paths = Object.keys(groups[group]);
+                var entries = [];
+                var used = {};
+                var index = null;
+
+                if (groups[group]['box.json']) {
+                    try { index = JSON.parse(new TextDecoder().decode(groups[group]['box.json'])); } catch (e) { index = null; }
+                }
+
+                if (index && Array.isArray(index.items)) {
+                    index.items.forEach(function (item) {
+                        if (item.sep != null) {
+                            entries.push({ sep: String(item.sep).slice(0, 24), side: item.side });
+                        } else if (typeof item.disk == 'string' && !used[item.disk]) {
+                            used[item.disk] = true;
+                            var disk = image(group, item.disk);
+                            if (disk) entries.push({ disk: disk });
+                        }
+                    });
+                    // images box.json does not list go to the front
+                    paths.sort().forEach(function (path) {
+                        if (used[path] || !isImage(path)) return;
+                        var disk = image(group, path);
+                        if (disk) entries.push({ disk: disk });
+                    });
+                    return { title: typeof index.title == 'string' ? index.title : group, entries: entries };
+                }
+
+                // from the front: the box folder, then a divider per folder
+                var front = [];
+                var folders = {};
+                paths.sort().forEach(function (path) {
+                    if (!isImage(path)) {
+                        if (extensionOf(path) != '.json') result.skipped++;
+                        return;
+                    }
+                    var parts = path.split('/');
+                    if (parts.length == 1) front.push(path);
+                    else (folders[parts[0]] = folders[parts[0]] || []).push(path);
+                });
+
+                var fromFront = [];
+                front.forEach(function (path) { fromFront.push({ path: path }); });
+                Object.keys(folders).sort().forEach(function (folder, i) {
+                    fromFront.push({ sep: folder.toUpperCase().slice(0, 24), side: i % 2 ? 'R' : 'L' });
+                    folders[folder].forEach(function (path) { fromFront.push({ path: path }); });
+                });
+
+                fromFront.reverse().forEach(function (e) {
+                    if (e.sep != null) { entries.push(e); return; }
+                    var disk = image(group, e.path);
+                    if (disk) entries.push({ disk: disk });
+                });
+                return { title: group, entries: entries };
+            }
+
+            return order.reduce(function (chain, group) {
+                return chain.then(function () {
+                    var box = entriesOf(group);
+                    var parts = [];
+                    for (var i = 0; i < box.entries.length || i == 0; i += 60) parts.push(box.entries.slice(i, i + 60));
+                    return parts.reduce(function (chain, entries, n) {
+                        return chain.then(function () {
+                            var title = n ? box.title + ' (' + (n + 1) + ')' : box.title;
+                            return self.addBoxWithDisks(title, entries).then(function (id) {
+                                result.boxes.push(id);
+                                result.disks += entries.filter(function (e) { return e.disk; }).length;
+                            });
+                        });
+                    }, Promise.resolve());
+                });
+            }, Promise.resolve()).then(function () { return result; });
+        });
+    };
+
     // { usage, quota } in bytes, or null where the browser does not say.
     self.estimate = function () {
         if (typeof navigator == 'undefined' || !navigator.storage || !navigator.storage.estimate) {

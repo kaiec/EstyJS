@@ -36,6 +36,27 @@ A saved state keeps its own copy of the disks in the drives. Loading it takes th
 box out first. A disk from a state stays apart from the box. Taken out after the ST wrote to it, it
 goes into the box as a new disk.
 
+## Export and import
+
+Export box writes the open box as a ZIP, Export all writes all boxes. Import adds the boxes in a
+ZIP, from this or another browser, or one put together by hand.
+
+```text
+<box>/
+├── box.json            {version, title, items}, the order of disks and dividers
+├── <label>.st          an unsorted disk: the image as stored (.st, .msa or .stx)
+├── <label>.json        {title, hasLabel, accent, body, writeProtected, name, created, modified}
+└── <DIVIDER>/          the disks behind the divider
+```
+
+- Import makes a box of every folder at the top of the ZIP. Files outside a folder go into a box
+  named after the ZIP.
+- Without `box.json`, the disks in the box folder are unsorted, and each folder below it becomes a
+  divider with its disks behind it, in alphabetical order.
+- Without the `.json` beside an image, the label is the file name.
+- Files that are no disk image EstyJS reads are left out, and so is what macOS adds to a ZIP.
+- More than 60 disks and dividers go on into a second box.
+
 ## Storage
 
 Boxes and disks are kept in IndexedDB together with the [saved states](states.md). An image used
