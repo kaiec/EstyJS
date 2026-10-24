@@ -72,7 +72,7 @@ function createMachine(estyDir, opts = {}) {
     const sandbox = {
         console: opts.quiet ? { log() {}, warn() {}, error() {} } : console,
         document: doc,
-        navigator: { userAgent: 'node', getGamepads: () => [] },
+        navigator: { userAgent: 'node', getGamepads: () => machine.gamepads },
         performance: { now: () => virtualMs },
         setTimeout: (fn) => { scheduled.push(fn); return scheduled.length; },
         clearTimeout() {}, setInterval: () => 0, clearInterval() {},
@@ -96,13 +96,14 @@ function createMachine(estyDir, opts = {}) {
     vm.createContext(sandbox);
 
     machine.files = {};          // virtual URL -> Buffer  (disk images, ROM)
+    machine.gamepads = [];       // what navigator.getGamepads() returns
     machine.screen = null;
 
     // ------------------------------------------------------------- source ---
     // Everything except sound.js, which is replaced by the recorder below:
     // there is no audio hardware here, and the recording is the point.
     const SOURCES = ['estyjs.js', 'processor.js', 'keyboard.js', 'mfp.js',
-                     'disk.js', 'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
+                     'disk.js', 'gamepad.js', 'fdc.js', 'io.js', 'bug.js', 'display.js', 'memory.js',
                      'snapshot.js', 'files.js', 'js-unzip.js', 'rawinflate.js'];
     for (const f of SOURCES) {
         const src = fs.readFileSync(path.join(estyDir, f), 'utf8').replace(/^﻿/, '');
@@ -196,6 +197,14 @@ function createMachine(estyDir, opts = {}) {
         const state = vm.runInContext('EstyJs.SnapshotFile({}).decode(__buffer);', sandbox);
         delete sandbox.__buffer;
         return state;
+    };
+
+    // A layout as the gamepad panel sets it up, see estyjs/gamepad.js.
+    machine.setGamepadLayout = function (id, layout) {
+        sandbox.__layout = layout;
+        vm.runInContext('EstyJs.gamepad.setLayout(' + JSON.stringify(id) + ', __layout);', sandbox);
+        delete sandbox.__layout;
+        return machine;
     };
 
     machine.reset = function () { vm.runInContext('esty.reset();', sandbox); return machine; };

@@ -448,46 +448,19 @@ EstyJs.Keyboard = function (opts) {
     self.onKey = null;
 
     self.checkJoystick = function () {
-        var newJoystickPos = 0;
+        var gamepad = EstyJs.gamepad.first();
+        if (gamepad == null || EstyJs.gamepad.learning) return;
 
-        var gamepad = null;
-        if (navigator.getGamepads && navigator.getGamepads().length > 0) gamepad = navigator.getGamepads()[0];
+        var newJoystickPos = EstyJs.gamepad.read(gamepad);
 
-        if (gamepad != null) {
-            //up
-            if (gamepad.buttons.length > 12 && gamepad.buttons[12].pressed) newJoystickPos |= 1;
-            //down
-            if (gamepad.buttons.length > 13 && gamepad.buttons[13].pressed) newJoystickPos |= 2;
-            //left
-            if (gamepad.buttons.length > 14 && gamepad.buttons[14].pressed) newJoystickPos |= 4;
-            //right
-            if (gamepad.buttons.length > 15 && gamepad.buttons[15].pressed) newJoystickPos |= 8;
-
-            //up
-            if (gamepad.axes.length > 0 && gamepad.axes[1] < -0.5) newJoystickPos |= 1;
-            //down
-            if (gamepad.axes.length > 0 && gamepad.axes[1] > 0.5) newJoystickPos |= 2;
-            //left
-            if (gamepad.axes.length > 1 && gamepad.axes[0] < -0.5) newJoystickPos |= 4;
-            //right
-            if (gamepad.axes.length > 1 && gamepad.axes[0] > 0.5) newJoystickPos |= 8;
-
-            //any other fire buttons
-            for (var i = 0; i < 12; i++) {
-                if (gamepad.buttons.length > i && gamepad.buttons[i].pressed) newJoystickPos |= 128;
-            }
-
-            if (newJoystickPos != joystickPos) {
-                joystickPos = newJoystickPos
-                if (joystickMode == 'E' && !port0Mouse) {
-                    //fe = joystick 0, ff = joystick 1
-                    dataOut.push(0xff);
-                    dataOut.push(joystickPos)
-                }
+        if (newJoystickPos != joystickPos) {
+            joystickPos = newJoystickPos
+            if (joystickMode == 'E' && !port0Mouse) {
+                //fe = joystick 0, ff = joystick 1
+                dataOut.push(0xff);
+                dataOut.push(joystickPos)
             }
         }
-
-        
     }
 
     self.readkeys = function () {

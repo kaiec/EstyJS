@@ -10,9 +10,11 @@
 	<link rel="stylesheet" type="text/css" href="css/estyjs2.css">
 	<script src="esty2-gui.js"></script>
 	<script src="esty2-keyboard.js"></script>
+	<script src="esty2-gamepad.js"></script>
 
 	<script src="estyjs/estyjs.js"></script>
 	<script src="estyjs/disk.js"></script>
+	<script src="estyjs/gamepad.js"></script>
 	<script src="estyjs/processor.js"></script>
 	<script src="estyjs/keyboard.js"></script>
 	<script src="estyjs/mfp.js"></script>
@@ -36,6 +38,7 @@
 			document.getElementById('selectedFileB').addEventListener('change', fileSelected2, false);
 			document.getElementById('selectedTOS').addEventListener('change', tosSelected, false);
 			EstyKeyboard.create('keyboardpanelbody');
+			EstyGamepad.create('gamepadpanelbody');
 			splashScreen('img/logo.png', function(){
 				estyjs = EstyJs("EstyJsOutput");
 				estyjs.setRowSkip(false);
@@ -55,6 +58,10 @@
 		<details id="keyboardpanel">
 			<summary>ST keyboard</summary>
 			<div id="keyboardpanelbody"></div>
+		</details>
+		<details id="gamepadpanel">
+			<summary>Gamepad</summary>
+			<div id="gamepadpanelbody"></div>
 		</details>
 		<div id="buttonpanel">
 			<div id="logo">

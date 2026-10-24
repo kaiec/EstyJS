@@ -138,12 +138,12 @@ canvas
    with a lighter top face, dark legends. The function keys are slanted, as
    they are on the machine and on the buttons above. */
 
-#keyboardpanel {
+#keyboardpanel, #gamepadpanel {
 	margin: 0px 0px 20px 60px;
 	width: 940px;
 }
 
-#keyboardpanel > summary {
+#keyboardpanel > summary, #gamepadpanel > summary {
 	cursor: pointer;
 	font-size: 18px;
 	padding: 4px 0px;
@@ -151,7 +151,7 @@ canvas
 	width: max-content;
 }
 
-#keyboardpanel > summary:hover {
+#keyboardpanel > summary:hover, #gamepadpanel > summary:hover {
 	color: #000000;
 }
 
@@ -411,4 +411,35 @@ button.kb-key.kb-cont, button.kb-key.kb-cont.down {
 	font-size: 16px;
 	color: #333333;
 	min-height: 22px;
+}
+
+/* ---- the gamepad panel ---- */
+
+.gp-status, .gp-prompt {
+	margin: 12px 0px;
+	font-size: 16px;
+	color: #333333;
+}
+
+.gp-prompt:empty {
+	display: none;
+}
+
+button.gp-button {
+	font-family: 'nostalgie';
+	font-weight: 800;
+	font-size: 13px;
+	background: linear-gradient(#eeeeee, #d4d4d2);
+	border: 1px solid #8f9082;
+	border-bottom: 3px solid #83847a;
+	border-radius: 2px;
+	color: #3c3c38;
+	padding: 4px 10px;
+	margin-right: 6px;
+	cursor: pointer;
+	box-shadow: 0px 1px 1px rgba(0,0,0,.25);
+}
+
+button.gp-button[hidden] {
+	display: none;
 }

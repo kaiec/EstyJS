@@ -42,6 +42,7 @@ action. GitHub Pages rebuilds on push.
     node tools/check-disks.js [--check known.json] <image>...
     node tools/check-joystick.js <disk>
     node tools/check-states.js [--boot N] [--after N] [--desktop] [--512k] [--mono] <image>...
+    node tools/check-gamepad.js [disk]
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -72,6 +73,11 @@ joystick prompt, such as Buggy Boy.
 and runs the same frames with the same mouse, key and joystick input. Frame and state must come out
 the same, otherwise the first differing field is printed. The restoring machine starts as 1 MB with
 a colour monitor, so `--512k` and `--mono` check that a state carries both.
+
+`check-gamepad` reads made up gamepads through `estyjs/gamepad.js`: a standard one, a SNES style
+pad as Firefox reports it, one with a hat switch and one with the D-pad on buttons. Each is set up as
+the panel does it and read in every direction. With a disk such as Buggy Boy it also checks that
+the ST sees gamepad directions and fire as it sees cursor keys and control.
 
 ## Sound
 
