@@ -118,12 +118,42 @@ function fileSelected2(evt) {
 
 function colorToggle() {
     estyjs.setMonoMonitor(!estyjs.getMonoMonitor());
+    showMonitor();
+}
+
+function showMonitor() {
     if (estyjs.getMonoMonitor()) {
         document.querySelector("#screen").style.backgroundImage = "url('img/sm124-bg.png')";
     } else {
         document.querySelector("#screen").style.backgroundImage = "url('img/sm124-sc-bg.png')";
         
     }
+}
+
+// One state, kept until the page is reloaded.
+var savedState = null;
+
+function saveState() {
+	savedState = estyjs.saveState();
+	document.querySelector('#btnLoadState').disabled = false;
+	diskMessage('Saved the state (' + Math.round(savedState.machine.byteLength / 1024) +
+	            ' KB), kept until the page is reloaded.', false);
+}
+
+function loadState() {
+	if (savedState == null) return;
+
+	try {
+		estyjs.restoreState(savedState);
+	} catch (e) {
+		diskMessage('Could not load the state: ' + e.message, true);
+		return;
+	}
+
+	showMonitor();
+	showDrive('A', savedState.disks.A != null);
+	showDrive('B', savedState.disks.B != null);
+	diskMessage('Loaded the saved state.', false);
 }
 
 // Cursor keys and control are joystick 1 while this is on. The label says what
