@@ -23,14 +23,21 @@ Current maintainer (since 2024): Kai Eckert
 // storage in the browser, IndexedDB database "estyjs"
 //
 //   blobs    key hash   { hash, bytes, refs }
-//   disks    key id     disks in the disk box
-//   boxes    key id     disk boxes
+//   boxes    key id     { title, items }
+//   disks    key id     { box, title, hasLabel, accent, body, writeProtected,
+//                         blob, name, format, created, modified }
 //   states   key id     { name, created, format, machine, rom, drives, thumbnail }
 //
 // Binary content is kept once in blobs, keyed by its SHA-256 in hex. refs
 // counts the records using a blob, which goes when the count reaches 0.
+//
+// items runs from the back of the box to the front: { disk: id } or
+// { sep: name, side: 'L' or 'R', id }. A disk is in one box. Its blob is the
+// image file, name the file it came from.
+//
 // In a state, machine and rom are blob hashes, drives is
-// { A: { blob, name } or null, B: ... }, thumbnail a PNG.
+// { A: { blob, name, disk } or null, B: ... } (disk is the id of the disk in
+// the box it came from, or null), thumbnail a PNG.
 //
 // All functions return promises. The schema only grows: an older EstyJS
 // (under ver/, same origin) refuses to open a newer database.
@@ -45,7 +52,9 @@ EstyJs.store = (function () {
     // Version of the export format.
     var EXPORT_VERSION = 1;
 
-    var db = null;
+    // One connection for the page, also when opened from several places at
+    // once. A second one would block the upgrade of a newer EstyJS.
+    var opening = null;
     var persistAsked = false;
 
     function promise(request) {
@@ -71,12 +80,12 @@ EstyJs.store = (function () {
     }
 
     self.open = function () {
-        if (db != null) return Promise.resolve(db);
+        if (opening != null) return opening;
         if (typeof indexedDB == 'undefined') {
             return Promise.reject(new Error('This browser offers no storage (IndexedDB).'));
         }
 
-        return new Promise(function (resolve, reject) {
+        opening = new Promise(function (resolve, reject) {
             var request = indexedDB.open(NAME, VERSION);
 
             request.onupgradeneeded = function () {
@@ -88,9 +97,9 @@ EstyJs.store = (function () {
             };
 
             request.onsuccess = function () {
-                db = request.result;
+                var db = request.result;
                 // a newer EstyJS in another tab wants to upgrade
-                db.onversionchange = function () { db.close(); db = null; };
+                db.onversionchange = function () { db.close(); opening = null; };
                 resolve(db);
             };
 
@@ -106,6 +115,8 @@ EstyJs.store = (function () {
                 reject(new Error('Another tab with an older EstyJS holds the storage. Close it and reload.'));
             };
         });
+        opening.catch(function () { opening = null; });
+        return opening;
     };
 
     // Safari otherwise deletes the storage of a site not visited for 7 days.
@@ -165,7 +176,8 @@ EstyJs.store = (function () {
     /* --------------------------------------------------------- states */
 
     // state: { name, created, format, machine, rom, drives, thumbnail } with
-    // machine and rom as bytes and drives as { A: { bytes, name } or null, B }.
+    // machine and rom as bytes and drives as { A: { bytes, name, disk } or
+    // null, B }.
     // Returns the id.
     self.addState = function (state) {
         var parts = [state.machine, state.rom];
@@ -199,7 +211,7 @@ EstyJs.store = (function () {
                 ['A', 'B'].forEach(function (drive) {
                     var disk = state.drives[drive];
                     if (disk == null) return;
-                    record.drives[drive] = { blob: hashes[next], name: disk.name || '' };
+                    record.drives[drive] = { blob: hashes[next], name: disk.name || '', disk: disk.disk || null };
                     count(hashes[next], disk.bytes);
                     next++;
                 });
@@ -222,7 +234,7 @@ EstyJs.store = (function () {
         });
     };
 
-    // { record, machine, rom, drives: { A: { bytes, name } or null, B } }, with
+    // { record, machine, rom, drives: { A: { bytes, name, disk } or null, B } }, with
     // machine as an ArrayBuffer (an imported one is stored as a Uint8Array).
     self.getState = function (id) {
         return self.open().then(function (d) {
@@ -242,7 +254,9 @@ EstyJs.store = (function () {
                 function drive(name) {
                     var disk = record.drives[name];
                     if (disk == null) return Promise.resolve(null);
-                    return bytes(disk.blob).then(function (b) { return { bytes: b, name: disk.name }; });
+                    return bytes(disk.blob).then(function (b) {
+                        return { bytes: b, name: disk.name, disk: disk.disk || null };
+                    });
                 }
 
                 return Promise.all([bytes(record.machine), bytes(record.rom), drive('A'), drive('B')])
@@ -286,6 +300,247 @@ EstyJs.store = (function () {
     self.countBlobs = function () {
         return self.open().then(function (d) {
             return promise(d.transaction('blobs').objectStore('blobs').count());
+        });
+    };
+
+    /* ------------------------------------------------- boxes and disks */
+
+    self.listBoxes = function () {
+        return self.open().then(function (d) {
+            return promise(d.transaction('boxes').objectStore('boxes').getAll());
+        });
+    };
+
+    self.getBox = function (id) {
+        return self.open().then(function (d) {
+            return promise(d.transaction('boxes').objectStore('boxes').get(id));
+        });
+    };
+
+    // Returns the id.
+    self.addBox = function (title) {
+        return self.open().then(function (d) {
+            persist();
+            return promise(d.transaction('boxes', 'readwrite').objectStore('boxes').add({ title: title, items: [] }));
+        });
+    };
+
+    // Title and the order of items. Disks come and go through addDisk,
+    // removeDisk and moveDisk.
+    self.saveBox = function (box) {
+        return self.open().then(function (d) {
+            var tx = d.transaction('boxes', 'readwrite');
+            tx.objectStore('boxes').put(box);
+            return done(tx);
+        });
+    };
+
+    // With the disks in it.
+    self.deleteBox = function (id) {
+        return self.open().then(function (d) {
+            var tx = d.transaction(['blobs', 'boxes', 'disks'], 'readwrite');
+            var disks = tx.objectStore('disks');
+            disks.getAll().onsuccess = function (e) {
+                var hashes = [];
+                e.target.result.forEach(function (disk) {
+                    if (disk.box != id) return;
+                    hashes.push(disk.blob);
+                    disks.delete(disk.id);
+                });
+                dropRefs(tx.objectStore('blobs'), hashes);
+            };
+            tx.objectStore('boxes').delete(id);
+            return done(tx);
+        });
+    };
+
+    // The disk records of a box, without their images.
+    self.listDisks = function (boxId) {
+        return self.open().then(function (d) {
+            return promise(d.transaction('disks').objectStore('disks').getAll());
+        }).then(function (disks) {
+            return disks.filter(function (disk) { return disk.box == boxId; });
+        });
+    };
+
+    self.getDisk = function (id) {
+        return self.open().then(function (d) {
+            return promise(d.transaction('disks').objectStore('disks').get(id));
+        });
+    };
+
+    self.getDiskBytes = function (id) {
+        return self.open().then(function (d) {
+            var tx = d.transaction(['blobs', 'disks']);
+            return promise(tx.objectStore('disks').get(id)).then(function (disk) {
+                if (disk == null) throw new Error('The disk is gone.');
+                return promise(tx.objectStore('blobs').get(disk.blob));
+            }).then(function (blob) {
+                if (blob == null) throw new Error('The image of the disk is missing.');
+                return blob.bytes;
+            });
+        });
+    };
+
+    function placeIn(box, diskId, at) {
+        var item = { disk: diskId };
+        if (at == null || at < 0 || at > box.items.length) box.items.push(item);
+        else box.items.splice(at, 0, item);
+    }
+
+    // disk: { title, hasLabel, accent, body, writeProtected, name, format,
+    // bytes }. at is the index in items, null for the front. Returns the id.
+    self.addDisk = function (boxId, disk, at) {
+        return self.hash(disk.bytes).then(function (hash) {
+            return self.open().then(function (d) {
+                persist();
+                var now = Date.now();
+                var record = {
+                    box: boxId, title: disk.title || '', hasLabel: disk.hasLabel !== false,
+                    accent: disk.accent, body: disk.body, writeProtected: !!disk.writeProtected,
+                    blob: hash, name: disk.name || '', format: disk.format || '',
+                    created: now, modified: now
+                };
+
+                var tx = d.transaction(['blobs', 'boxes', 'disks'], 'readwrite');
+                var boxes = tx.objectStore('boxes');
+                var counts = {};
+                counts[hash] = { bytes: disk.bytes, n: 1 };
+                addRefs(tx.objectStore('blobs'), counts);
+
+                var id = null;
+                tx.objectStore('disks').add(record).onsuccess = function (e) {
+                    id = e.target.result;
+                    boxes.get(boxId).onsuccess = function (e) {
+                        var box = e.target.result;
+                        if (box == null) { tx.abort(); return; }
+                        placeIn(box, id, at);
+                        boxes.put(box);
+                    };
+                };
+                return done(tx).then(function () { return id; });
+            });
+        });
+    };
+
+    // title, hasLabel, accent, body, writeProtected
+    self.updateDisk = function (id, fields) {
+        return self.open().then(function (d) {
+            var tx = d.transaction('disks', 'readwrite');
+            var disks = tx.objectStore('disks');
+            disks.get(id).onsuccess = function (e) {
+                var disk = e.target.result;
+                if (disk == null) return;
+                ['title', 'hasLabel', 'accent', 'body', 'writeProtected'].forEach(function (key) {
+                    if (fields.hasOwnProperty(key)) disk[key] = fields[key];
+                });
+                disks.put(disk);
+            };
+            return done(tx);
+        });
+    };
+
+    // The image after the ST wrote to it. States keep the blob they hold.
+    self.writeDisk = function (id, bytes, format) {
+        return self.hash(bytes).then(function (hash) {
+            return self.open().then(function (d) {
+                var tx = d.transaction(['blobs', 'disks'], 'readwrite');
+                var blobs = tx.objectStore('blobs');
+                var disks = tx.objectStore('disks');
+                disks.get(id).onsuccess = function (e) {
+                    var disk = e.target.result;
+                    if (disk == null || disk.blob == hash) return;
+                    var counts = {};
+                    counts[hash] = { bytes: bytes, n: 1 };
+                    addRefs(blobs, counts);
+                    dropRefs(blobs, [disk.blob]);
+                    disk.blob = hash;
+                    disk.format = format;
+                    disk.modified = Date.now();
+                    disks.put(disk);
+                };
+                return done(tx);
+            });
+        });
+    };
+
+    function takeOut(boxes, boxId, diskId, then) {
+        boxes.get(boxId).onsuccess = function (e) {
+            var box = e.target.result;
+            if (box != null) {
+                box.items = box.items.filter(function (item) { return item.disk != diskId; });
+                boxes.put(box);
+            }
+            if (then) then();
+        };
+    }
+
+    self.removeDisk = function (id) {
+        return self.open().then(function (d) {
+            var tx = d.transaction(['blobs', 'boxes', 'disks'], 'readwrite');
+            var disks = tx.objectStore('disks');
+            disks.get(id).onsuccess = function (e) {
+                var disk = e.target.result;
+                if (disk == null) return;
+                takeOut(tx.objectStore('boxes'), disk.box, id);
+                dropRefs(tx.objectStore('blobs'), [disk.blob]);
+                disks.delete(id);
+            };
+            return done(tx);
+        });
+    };
+
+    // To the front of another box.
+    self.moveDisk = function (id, toBox) {
+        return self.open().then(function (d) {
+            var tx = d.transaction(['boxes', 'disks'], 'readwrite');
+            var boxes = tx.objectStore('boxes');
+            var disks = tx.objectStore('disks');
+            disks.get(id).onsuccess = function (e) {
+                var disk = e.target.result;
+                if (disk == null || disk.box == toBox) return;
+                takeOut(boxes, disk.box, id, function () {
+                    boxes.get(toBox).onsuccess = function (e) {
+                        var box = e.target.result;
+                        if (box == null) { tx.abort(); return; }
+                        placeIn(box, id, null);
+                        boxes.put(box);
+                        disk.box = toBox;
+                        disks.put(disk);
+                    };
+                });
+            };
+            return done(tx);
+        });
+    };
+
+    // A second disk with the same image and label, at the front of a box.
+    // Returns the id.
+    self.copyDisk = function (id, toBox) {
+        return self.open().then(function (d) {
+            var tx = d.transaction(['blobs', 'boxes', 'disks'], 'readwrite');
+            var boxes = tx.objectStore('boxes');
+            var disks = tx.objectStore('disks');
+            var copyId = null;
+            disks.get(id).onsuccess = function (e) {
+                var disk = e.target.result;
+                if (disk == null) return;
+                var copy = Object.assign({}, disk, { box: toBox, created: Date.now() });
+                delete copy.id;
+                var counts = {};
+                counts[disk.blob] = { bytes: null, n: 1 };
+                addRefs(tx.objectStore('blobs'), counts);
+                disks.add(copy).onsuccess = function (e) {
+                    copyId = e.target.result;
+                    boxes.get(toBox).onsuccess = function (e) {
+                        var box = e.target.result;
+                        if (box == null) { tx.abort(); return; }
+                        placeIn(box, copyId, null);
+                        boxes.put(box);
+                    };
+                };
+            };
+            return done(tx).then(function () { return copyId; });
         });
     };
 

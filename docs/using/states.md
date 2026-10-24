@@ -7,7 +7,8 @@ it was saved.
 
 - A new state takes the name of the state last loaded or saved, renames included. Without one, it
   takes the file name of the disk in drive A. Click the name to change it.
-- Loading puts the saved disks into the drives and the saved ROM into the machine.
+- Loading puts the saved disks into the drives and the saved ROM into the machine. How this works
+  with disks from the disk box is described [there](diskbox.md#writing).
 - Keys, mouse buttons and joystick directions held while saving are released after loading.
 - A disk or ROM used by several states is stored once.
 - A state saved by another version of EstyJS is listed and cannot be loaded.

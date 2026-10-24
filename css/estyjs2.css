@@ -425,7 +425,7 @@ button.kb-key.kb-cont, button.kb-key.kb-cont.down {
 	display: none;
 }
 
-button.gp-button, button.st-button {
+button.gp-button, button.st-button, button.db-button {
 	font-family: 'nostalgie';
 	font-weight: 800;
 	font-size: 13px;
@@ -444,7 +444,7 @@ button.gp-button[hidden] {
 	display: none;
 }
 
-button.st-button:disabled {
+button.st-button:disabled, button.db-button:disabled {
 	cursor: default;
 	color: #9a9a92;
 }
@@ -515,4 +515,208 @@ button.st-button:disabled {
 	font-size: 16px;
 	color: #555555;
 	padding: 8px 0px;
+}
+
+/* ---- the disk box, over the emulator ---- */
+
+.db-overlay {
+	position: fixed;
+	inset: 0px;
+	z-index: 100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(40, 40, 38, 0.55);
+}
+
+.db-overlay[hidden] {
+	display: none;
+}
+
+.db-dialog {
+	width: min(1240px, calc(100vw - 32px));
+	max-height: calc(100vh - 32px);
+	overflow: auto;
+	box-sizing: border-box;
+	padding: 14px 16px;
+	background: #e9e7e2;
+	border: 1px solid #8f9082;
+	border-radius: 4px;
+	box-shadow: 0px 8px 30px rgba(0,0,0,.35);
+	color: #333333;
+	font-size: 15px;
+	outline: none;
+}
+
+.db-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+}
+
+.db-head select, .db-head input, .db-panel input[type="text"], .db-panel select {
+	font: inherit;
+	padding: 3px 6px;
+	border: 1px solid #8f9082;
+	border-radius: 2px;
+	background: #ffffff;
+	color: #333333;
+}
+
+.db-title {
+	width: 220px;
+}
+
+.db-count {
+	margin-left: auto;
+	color: #555555;
+	font-variant-numeric: tabular-nums;
+}
+
+button.db-close {
+	margin-right: 0px;
+}
+
+.db-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 270px;
+	gap: 16px;
+}
+
+@media (max-width: 800px) {
+	.db-body {
+		grid-template-columns: 1fr;
+	}
+}
+
+.db-stage {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 960 / 459;
+	overflow: hidden;
+	border-radius: 3px;
+	background: #cccccb;
+}
+
+.db-stage canvas {
+	position: absolute;
+	inset: 0px;
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+}
+
+/* text on the open disk label: laid out in label millimetres (10 px/mm) and
+   projected onto the label with a CSS matrix3d. The text is drawn into the
+   label texture, the textarea gives caret, selection and input. */
+.db-label {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	transform-origin: 0 0;
+	margin: 0px;
+	border: 0px;
+	outline: none;
+	resize: none;
+	overflow: hidden;
+	background: transparent;
+	color: transparent;
+	caret-color: #17307a;
+	font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+	font-weight: 700;
+	white-space: pre;
+	display: none;
+}
+
+.db-label:focus {
+	background: rgba(255, 255, 160, 0.14);
+}
+
+.db-label::selection {
+	background: rgba(80, 120, 255, 0.3);
+	color: transparent;
+}
+
+.db-panel h3 {
+	font-size: 15px;
+	margin: 14px 0px 6px;
+}
+
+.db-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.db-tools button.db-button {
+	margin-right: 0px;
+}
+
+.db-panel [hidden] {
+	display: none;
+}
+
+.db-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 6px 0px;
+}
+
+.db-drives, .db-other {
+	justify-content: flex-start;
+}
+
+.db-other select {
+	flex: 1;
+	min-width: 0;
+}
+
+button.db-target {
+	border-color: #3c3c38;
+}
+
+.db-swatches {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.db-swatches button {
+	width: 20px;
+	height: 20px;
+	padding: 0px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+}
+
+.db-swatches button[aria-pressed="true"] {
+	border-color: #333333;
+}
+
+.db-small {
+	margin: 8px 0px;
+	font-size: 13px;
+	color: #555555;
+	overflow-wrap: anywhere;
+}
+
+.db-message {
+	margin: 10px 0px 0px;
+	min-height: 20px;
+}
+
+.db-message.problem {
+	color: #a02000;
+}
+
+.db-hint {
+	margin: 4px 0px 0px;
+	font-size: 13px;
+	color: #555555;
 }

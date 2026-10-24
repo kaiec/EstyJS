@@ -114,6 +114,15 @@ function tosSelected(evt) {
 	}
 }
 
+// The disk box where the browser can show it, the file picker otherwise.
+function driveClicked(drive) {
+	if (typeof EstyDiskbox != 'undefined' && EstyDiskbox.available) {
+		EstyDiskbox.open(drive);
+	} else {
+		document.getElementById(drive == 'B' ? 'selectedFileB' : 'selectedFile').click();
+	}
+}
+
 function fileSelected(evt) {
 	diskSelected(evt, 'A');
 }

@@ -45,6 +45,7 @@ action. GitHub Pages rebuilds on push.
     node tools/check-gamepad.js [disk]
     node tools/check-write.js [--tos ROM] [image.stx]
     node tools/check-store.js <disk> [--port N]
+    node tools/check-diskbox.js [image.stx] [--port N]
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -87,12 +88,20 @@ three seconds and opens a file on a second disk swapped in meanwhile. Checks the
 carries the written disk. With an STX image it checks that the image is write protected. `--tos`
 boots another ROM (passes with EmuTOS, TOS 1.00 and 1.04).
 
-`check-store` needs `chromium`, since IndexedDB does not exist under Node. It serves the working
-copy, boots the disk in a fresh profile and saves, loads, renames, exports, deletes and imports
-states through the panel's functions. Checks that disks and ROM are stored once and that their
+`check-store` and `check-diskbox` need `chromium`, since IndexedDB and WebGL do not exist under
+Node. `chromium.js` serves the working copy and drives the browser for both, `test-disk.js` builds
+the test disk for `check-write` and `check-diskbox`.
+
+`check-store` boots the disk in a fresh profile and saves, loads, renames, exports, deletes and
+imports states through the panel's functions. Checks that disks and ROM are stored once and that their
 blobs go with the last state using them, that a key held while saving is released after loading,
 that typing into the name field renames without the ST seeing the keys, and that a database set up
 by a newer EstyJS is reported.
+
+`check-diskbox` adds the test disk to the box through the file input, inserts it and resets the ST.
+The file its program creates has to reach the disk in the box once the drive light goes off. Then
+checks taking the disk out, a second box, a state holding the disk, that keys do not reach the ST
+while the box is open, and the file picker without WebGL2 or IndexedDB.
 
 ## Sound
 

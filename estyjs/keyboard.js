@@ -394,9 +394,20 @@ EstyJs.Keyboard = function (opts) {
             sendMake(keyCode);
         }
     }
+    // Whether the ST saw the key go down and waits for it to come up.
+    function heldBySt(physicalKey) {
+        var keyCode = stScancodes[physicalKey];
+        if (keyCode == null) return false;
+        if (self.KeypadJoystick && (keyCode == 75 || keyCode == 77 || keyCode == 72 || keyCode == 80 || keyCode == 0x1D)) {
+            return joystickPos != 0;
+        }
+        return keysDown.indexOf(keyCode) >= 0;
+    }
+
     function keyUp(evt) {
-        //a key pressed before the field got the focus is still released
-        if (intoField(evt) && keysDown.indexOf(stScancodes[evt.code]) < 0) return;
+        //a key that went down in a text field or while the keyboard was off is
+        //not released to the ST, one pressed before is
+        if ((intoField(evt) || !self.active) && !heldBySt(evt.code)) return;
         registerKeyUp(evt.code);
         if (self.active && !evt.metaKey) return false;
     }

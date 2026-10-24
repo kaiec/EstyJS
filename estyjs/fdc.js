@@ -522,14 +522,16 @@ EstyJs.fdc = function (opts) {
         return new Uint8Array(target.disk.bytes);
     }
 
-    // {format, writeProtected, dirty} of the disk in the drive, or null.
+    // {format, writeProtected, dirty, motor} of the disk in the drive, or
+    // null. motor is the drive light.
     self.getDiskInfo = function (drive) {
         var target = drives[drive];
         if (target == null || target.disk == null) return null;
         return {
             format: target.disk.format,
             writeProtected: target.writeProtected,
-            dirty: target.dirty
+            dirty: target.dirty,
+            motor: (target.status & 0x80) != 0
         };
     }
 

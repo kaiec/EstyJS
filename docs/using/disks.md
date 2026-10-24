@@ -31,6 +31,7 @@ sector may be misread. `.msa` and `.stx` carry their geometry in the header.
 - Formatting (write track) answers write protected.
 - The write protect signal is on for half a second after a disk goes in or out. TOS takes that as a
   disk change.
+- What the ST writes is kept in the [disk box](diskbox.md).
 
 ## STX
 

@@ -205,6 +205,11 @@ var EstyStates = (function () {
 
     /* ---------------------------------------------------- the actions */
 
+    // The id of the disk in the disk box the drive holds, or null.
+    function diskIn(drive) {
+        return typeof EstyDiskbox != 'undefined' ? EstyDiskbox.diskInDrive(drive) : null;
+    }
+
     self.save = function () {
         var state = estyjs.saveState();
         var name = current.name || driveNames.A || 'No disk';
@@ -217,8 +222,8 @@ var EstyStates = (function () {
                 machine: state.machine,
                 rom: state.rom,
                 drives: {
-                    A: state.disks.A ? { bytes: state.disks.A, name: driveNames.A } : null,
-                    B: state.disks.B ? { bytes: state.disks.B, name: driveNames.B } : null
+                    A: state.disks.A ? { bytes: state.disks.A, name: driveNames.A, disk: diskIn('A') } : null,
+                    B: state.disks.B ? { bytes: state.disks.B, name: driveNames.B, disk: diskIn('B') } : null
                 },
                 thumbnail: png
             });
@@ -230,7 +235,12 @@ var EstyStates = (function () {
     };
 
     self.load = function (id) {
-        return EstyJs.store.getState(id).then(function (s) {
+        var s = null;
+        return EstyJs.store.getState(id).then(function (loaded) {
+            s = loaded;
+            //disks from the box go back first, with what the ST wrote to them
+            return typeof EstyDiskbox != 'undefined' ? EstyDiskbox.takeOutAll() : null;
+        }).then(function () {
             estyjs.restoreState({
                 machine: s.machine,
                 rom: s.rom,
@@ -240,6 +250,7 @@ var EstyStates = (function () {
                 }
             });
             estyjs.releaseHostInput();
+            if (typeof EstyDiskbox != 'undefined') EstyDiskbox.stateLoaded(s.drives);
 
             ['A', 'B'].forEach(function (d) {
                 driveNames[d] = s.drives[d] ? s.drives[d].name : null;

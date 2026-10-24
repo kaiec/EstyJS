@@ -21,7 +21,8 @@ Keys the ST has and a PC does not:
 
 Cursor keys and ctrl are joystick 1 unless the Joystick button is switched off.
 
-Keys typed into a text field of the page (the name of a saved state) do not reach the ST.
+Keys typed into a text field of the page (the name of a saved state) do not reach the ST, nor do
+keys pressed while the disk box is open.
 
 ## On screen keyboard
 

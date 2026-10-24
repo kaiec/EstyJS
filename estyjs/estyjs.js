@@ -279,6 +279,11 @@ function EstyJs(output) {
 		return snapshot.FORMAT;
 	}
 
+	// Off while the page uses the keys itself, such as in a dialog.
+	self.setKeyboardEnabled = function (on) {
+		keyboard.active = on;
+	}
+
 	// After restoreState, for a page where nothing is held any more.
 	self.releaseHostInput = function () {
 		keyboard.releaseHostInput();

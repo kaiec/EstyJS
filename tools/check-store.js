@@ -14,13 +14,8 @@
  * Needs `chromium` on PATH. IndexedDB does not exist under Node.
  */
 
-const fs = require('fs');
-const os = require('os');
-const http = require('http');
-const path = require('path');
-const { spawn } = require('child_process');
+const { serve, browser, sleep } = require('./chromium');
 
-const ROOT = path.join(__dirname, '..');
 const DEBUG_PORT = 9336;
 
 const args = process.argv.slice(2);
@@ -42,105 +37,11 @@ function check(what, got, want) {
                 '\n       want: ' + JSON.stringify(want)));
 }
 
-// ----------------------------------------------------------------- server ---
-
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
-
-const server = http.createServer((req, res) => {
-    let name = decodeURIComponent(req.url.split('?')[0]);
-    if (name == '/') name = '/index.html';
-    const file = name == '/__disk__' ? disk : path.join(ROOT, name);
-    fs.readFile(file, (err, data) => {
-        if (err) { res.writeHead(404); res.end(); return; }
-        res.writeHead(200, {
-            'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream',
-            'Cache-Control': 'no-store'
-        });
-        res.end(data);
-    });
-});
-
-// ---------------------------------------------------------------- browser ---
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-async function browser() {
-    const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'estyjs-store-'));
-    const chrome = spawn('chromium', ['--headless=new', '--no-sandbox', '--disable-gpu', '--mute-audio',
-        `--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`, 'about:blank'],
-        { stdio: ['ignore', 'ignore', 'ignore'] });
-
-    let targets = null;
-    for (let i = 0; i < 50 && !targets; i++) {
-        await sleep(200);
-        try { targets = await (await fetch(`http://localhost:${DEBUG_PORT}/json/list`)).json(); } catch {}
-    }
-    if (!targets) throw new Error('chromium did not start');
-
-    const socket = new WebSocket(targets.find(t => t.type == 'page').webSocketDebuggerUrl);
-    await new Promise(r => { socket.onopen = r; });
-
-    let nextId = 0;
-    const waiting = new Map();
-    const errors = [];
-    socket.onmessage = (e) => {
-        const m = JSON.parse(e.data);
-        if (m.id && waiting.has(m.id)) { waiting.get(m.id)(m); waiting.delete(m.id); }
-        else if (m.method == 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || 'exception');
-    };
-    const send = (method, params = {}) => new Promise(resolve => {
-        const id = ++nextId;
-        waiting.set(id, resolve);
-        socket.send(JSON.stringify({ id, method, params }));
-    });
-
-    // Runs an async function body in the page and returns its value.
-    const page = async (body) => {
-        const m = await send('Runtime.evaluate', {
-            expression: `(async () => { ${body} })()`, returnByValue: true, awaitPromise: true
-        });
-        if (m.result.exceptionDetails) throw new Error(m.result.exceptionDetails.exception?.description);
-        return m.result.result.value;
-    };
-
-    const open = async () => {
-        await send('Page.navigate', { url: `http://localhost:${port}/` });
-        for (let i = 0; i < 60; i++) {
-            await sleep(500);
-            try { if (await page('return typeof estyjs == "object" && estyjs != null;')) return; } catch {}
-        }
-        throw new Error('EstyJS did not start');
-    };
-
-    await send('Runtime.enable');
-    await send('Page.enable');
-    // a headless page never has the focus, so no field would get it
-    await send('Emulation.setFocusEmulationEnabled', { enabled: true });
-
-    const exited = new Promise(r => chrome.on('exit', r));
-    const close = async () => {
-        chrome.kill();
-        await exited;
-        fs.rmSync(profile, { recursive: true, force: true });
-    };
-    // Types text as key presses into whatever has the focus, then Enter.
-    const type = async (text) => {
-        for (const ch of text) {
-            await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, text: ch, code: 'Key' + ch.toUpperCase() });
-            await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code: 'Key' + ch.toUpperCase() });
-        }
-        await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
-        await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
-    };
-
-    return { page, open, close, type, errors };
-}
-
 // ------------------------------------------------------------------ checks ---
 
 (async () => {
-    await new Promise(r => server.listen(port, r));
-    const b = await browser();
+    const server = await serve(port, { '/__disk__': disk });
+    const b = await browser(port, DEBUG_PORT);
 
     try {
         await b.open();
@@ -287,6 +188,7 @@ async function browser() {
                 const r = indexedDB.open('estyjs', 2);
                 r.onsuccess = () => { r.result.close(); resolve(); };
                 r.onerror = () => reject(r.error);
+                r.onblocked = () => reject(new Error('the upgrade is blocked by a connection left open'));
             });`);
         await b.open();
         await sleep(500);
