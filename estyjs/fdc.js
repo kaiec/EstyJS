@@ -26,6 +26,13 @@ Current maintainer (since 2024): Kai Eckert
 //
 // Sectors are found by matching the address field on the track, not by
 // computing an offset into the image. The disk comes from disk.js.
+//
+// Write sector and write multiple change .ST and .MSA disks. STX disks are
+// always write protected. Write track (formatting) answers write protected.
+//
+// TOS notices a disk change through the write protect bit of the type I
+// status: the sensor is covered while a disk goes in or out. The bit is held
+// for CHANGE_ROWS after every insert and eject.
 "use strict";
 
 EstyJs.fdc = function (opts) {
@@ -43,13 +50,20 @@ EstyJs.fdc = function (opts) {
 
     var aborted = false;
 
+    //half a second
+    var CHANGE_ROWS = 313 * 25;
+
     function newDrive() {
         return {
             disk: null,
             currentTrack: 0,
             status: 0x64,
-            hblCount: 0,      //number of hbls since last command
-            addressIndex: 0   //which address field read address hands over next
+            typeI: true,           //status holds a type I status
+            hblCount: 0,           //number of hbls since last command
+            addressIndex: 0,       //which address field read address hands over next
+            writeProtected: false,
+            dirty: false,          //written since inserted or clearDirty
+            changeRows: 0          //rows the write protect bit is held for a disk change
         };
     }
 
@@ -88,9 +102,15 @@ EstyJs.fdc = function (opts) {
         if (d) d.currentTrack = val;
     }
 
+    function writeProtectBit(d) {
+        if (d.changeRows > 0) return 0x40;
+        return d.disk != null && d.writeProtected ? 0x40 : 0;
+    }
+
     function readDriveStatus() {
         var d = drive();
-        return d ? d.status : 0x64;
+        if (d == null) return 0x64;
+        return d.typeI ? (d.status & 0xbf) | writeProtectBit(d) : d.status;
     }
 
     function writeDriveStatus(val) {
@@ -202,9 +222,39 @@ EstyJs.fdc = function (opts) {
         return track.image.length;
     }
 
+    // Type II status: bit 6 write protected, bit 4 record not found. Write
+    // multiple runs until the count is used up or a sector is not found.
+    function writeSectors(count) {
+        var d = drive();
+        if (d == null || d.disk == null) return 0x90;
+        if (d.writeProtected) return 0xc0;
+
+        var number = sectorNo;
+        var written = 0;
+
+        while (count-- > 0) {
+            var sector = findSector(number++);
+            if (sector == null || sector.data == null) break;
+
+            for (var i = 0; i < sector.size; i++) {
+                sector.data[i] = memory.readByte(dmaAddr++);
+            }
+            written++;
+        }
+
+        if (written == 0) return 0x90;
+
+        d.disk.written();
+        d.dirty = true;
+        return 0x80;
+    }
+
     /* --------------------------------------------------------- the command */
 
     function processCommand() {
+        var d = drive();
+        if (d) d.typeI = (commandNo & 0x80) == 0 || (commandNo & 0xf0) == 0xd0;
+
         switch (commandNo & 0xf0) {
             case 0x0:
                 //track 0 seek
@@ -429,15 +479,19 @@ EstyJs.fdc = function (opts) {
     }
 
     // Returns what the image turned out to be, or that it was not a disk
-    // image. null ejects the disk.
-    self.insertDisk = function (drive, arrayBuffer) {
+    // image. null ejects the disk. Writing leaves arrayBuffer unchanged.
+    self.insertDisk = function (drive, arrayBuffer, writeProtected) {
         var target = drives[drive];
         if (target == null) return { ok: false };
 
         var disk = arrayBuffer == null ? null : EstyJs.diskImage.load(arrayBuffer);
 
+        if (target.disk != null || disk != null) target.changeRows = CHANGE_ROWS;
+
         target.disk = disk;
         target.addressIndex = 0;
+        target.dirty = false;
+        target.writeProtected = disk != null && (writeProtected == true || !disk.writable);
 
         if (arrayBuffer == null) return { ok: false };
 
@@ -455,15 +509,33 @@ EstyJs.fdc = function (opts) {
             format: disk.format,
             tracks: disk.tracks,
             sides: disk.sides,
-            sectorsPerTrack: disk.sectorsPerTrack
+            sectorsPerTrack: disk.sectorsPerTrack,
+            writeProtected: target.writeProtected
         };
     }
 
-    // A copy of the image in the drive, or null.
+    // A copy of the image in the drive, or null. A written disk is an .ST
+    // image.
     self.getDiskBytes = function (drive) {
         var target = drives[drive];
         if (target == null || target.disk == null) return null;
         return new Uint8Array(target.disk.bytes);
+    }
+
+    // {format, writeProtected, dirty} of the disk in the drive, or null.
+    self.getDiskInfo = function (drive) {
+        var target = drives[drive];
+        if (target == null || target.disk == null) return null;
+        return {
+            format: target.disk.format,
+            writeProtected: target.writeProtected,
+            dirty: target.dirty
+        };
+    }
+
+    self.clearDirty = function (drive) {
+        var target = drives[drive];
+        if (target != null) target.dirty = false;
     }
 
     // Loading is asynchronous. callback reports what the file turned out to
@@ -490,8 +562,9 @@ EstyJs.fdc = function (opts) {
         for (var name in drives) {
             var d = drives[name];
             state.drives[name] = {
-                currentTrack: d.currentTrack, status: d.status,
-                hblCount: d.hblCount, addressIndex: d.addressIndex
+                currentTrack: d.currentTrack, status: d.status, typeI: d.typeI,
+                hblCount: d.hblCount, addressIndex: d.addressIndex,
+                writeProtected: d.writeProtected, changeRows: d.changeRows
             };
         }
         return state;
@@ -505,8 +578,9 @@ EstyJs.fdc = function (opts) {
         commandCompleteTimer = state.commandCompleteTimer; dmaStatusReg = state.dmaStatusReg;
         for (var name in drives) {
             var d = drives[name], s = state.drives[name];
-            d.currentTrack = s.currentTrack; d.status = s.status;
+            d.currentTrack = s.currentTrack; d.status = s.status; d.typeI = s.typeI;
             d.hblCount = s.hblCount; d.addressIndex = s.addressIndex;
+            d.writeProtected = s.writeProtected; d.changeRows = s.changeRows;
         }
     }
 
@@ -518,6 +592,8 @@ EstyJs.fdc = function (opts) {
     self.processRow = function () {
         for (var name in drives) {
             var d = drives[name];
+
+            if (d.changeRows > 0) d.changeRows--;
 
             if (d.status & 0x80) {
                 d.hblCount++;
@@ -610,12 +686,12 @@ EstyJs.fdc = function (opts) {
                         break;
 
                     case 0xa0:
-                        //write - write protected
-                        status = 0xc0; // | (currentTrack() ? 0 : 4) | (diskInserted() ? 0 : 16);
+                        //write sector
+                        status = selectedDrive != '' ? writeSectors(1) : 0x90;
                         break;
                     case 0xb0:
-                        //write multiple - write protected
-                        status = 0xc0; // | (currentTrack() ? 0 : 4) | (diskInserted() ? 0 : 16);
+                        //write multiple
+                        status = selectedDrive != '' ? writeSectors(sectorCount) : 0x90;
                         break;
                     case 0xc0:
                         //read addr

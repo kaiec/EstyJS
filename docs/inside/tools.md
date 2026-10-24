@@ -4,8 +4,8 @@ Command line helpers in `tools/`, run from the repository root. Node only, no de
 part of the emulator and not served to the browser.
 
 `esty-headless.js` boots EstyJS under Node with the browser objects it touches stubbed out, and
-exposes `run(frames)`, `insertDisk`, `mouseTo`, `click`, `key`, `saveScreen`, `saveWrites`,
-`saveState` and `restoreState`. Frames are pumped by hand, so runs are deterministic and about
+exposes `run(frames)`, `insertDisk`, `insertDiskBytes`, `getDiskBytes`, `getDiskInfo`, `mouseTo`,
+`click`, `key`, `saveScreen`, `saveWrites`, `saveState` and `restoreState`. Frames are pumped by hand, so runs are deterministic and about
 thirteen times faster than real time. The host clock is fixed and `Math.random` is seeded
 (`seedRandom`). The other tools are built on it.
 
@@ -43,6 +43,7 @@ action. GitHub Pages rebuilds on push.
     node tools/check-joystick.js <disk>
     node tools/check-states.js [--boot N] [--after N] [--desktop] [--512k] [--mono] <image>...
     node tools/check-gamepad.js [disk]
+    node tools/check-write.js [--tos ROM] [image.stx]
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -78,6 +79,12 @@ a colour monitor, so `--512k` and `--mono` check that a state carries both.
 pad as Firefox reports it, one with a hat switch and one with the D-pad on buttons. Each is set up as
 the panel does it and read in every direction. With a disk such as Buggy Boy it also checks that
 the ST sees gamepad directions and fire as it sees cursor keys and control.
+
+`check-write` builds a 720 KB disk with `AUTO\TEST.PRG`, which creates a file through GEMDOS, waits
+three seconds and opens a file on a second disk swapped in meanwhile. Checks the written image as
+`.st` and `.msa`, a write protected disk, that TOS notices the disk change, and that a state
+carries the written disk. With an STX image it checks that the image is write protected. `--tos`
+boots another ROM (passes with EmuTOS, TOS 1.00 and 1.04).
 
 ## Sound
 

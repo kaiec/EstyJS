@@ -177,6 +177,18 @@ function createMachine(estyDir, opts = {}) {
         return machine;
     };
 
+    // bytes is a Buffer or Uint8Array, null ejects. Returns what fdc.insertDisk
+    // returns.
+    machine.insertDiskBytes = function (drive, bytes, writeProtected) {
+        sandbox.__bytes = bytes == null ? null : new Uint8Array(bytes).buffer;
+        const result = vm.runInContext(`esty.insertDisk("${drive}", __bytes, ${!!writeProtected});`, sandbox);
+        delete sandbox.__bytes;
+        return result;
+    };
+
+    machine.getDiskBytes = (drive) => vm.runInContext(`esty.getDiskBytes("${drive}");`, sandbox);
+    machine.getDiskInfo = (drive) => vm.runInContext(`esty.getDiskInfo("${drive}");`, sandbox);
+
     // {machine, rom, disks}, as EstyJs.saveState returns it.
     machine.saveState = function () {
         return vm.runInContext('esty.saveState();', sandbox);

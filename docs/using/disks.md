@@ -24,6 +24,14 @@ against the sector and track registers, as the WD1772 does.
 sector, trying 9, 10 and 11 sectors per track. Images with an unusual layout and no usable boot
 sector may be misread. `.msa` and `.stx` carry their geometry in the header.
 
+## Writing
+
+- `.st` and `.msa` disks can be written. A written `.msa` disk is held as `.st` from then on.
+- `.stx` disks are write protected.
+- Formatting (write track) answers write protected.
+- The write protect signal is on for half a second after a disk goes in or out. TOS takes that as a
+  disk change.
+
 ## STX
 
 Read from the image and acted on:
@@ -42,5 +50,4 @@ Not emulated:
   sector (Macrodos, Speedlock).
 - Track reads start at the index instead of at the head position.
 
-Protections that measure time or head position therefore fail. Writing to an `.stx` image and
-formatting are not supported.
+Protections that measure time or head position therefore fail.

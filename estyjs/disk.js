@@ -31,6 +31,8 @@ Current maintainer (since 2024): Kai Eckert
 //   disk.sectorsPerTrack   nominal, for reporting
 //   disk.getTrack(t, side) -> { sectors, image } or null if unformatted
 //   disk.bytes             the image file it was decoded from
+//   disk.writable          sectors can be written (ST and MSA)
+//   disk.written()         called after a write: bytes become the sectors as .ST
 //
 // image is the raw track as read track returns it, STX only.
 //
@@ -45,7 +47,8 @@ Current maintainer (since 2024): Kai Eckert
 //
 // .ST and .MSA have no address fields, so they get the ones a normally
 // formatted disk would have: sectors numbered from 1, ID track and side
-// matching the physical position.
+// matching the physical position. Their sectors are views on one buffer of
+// raw sectors, so a write to sector.data lands in it.
 "use strict";
 
 EstyJs.diskImage = (function () {
@@ -69,17 +72,24 @@ EstyJs.diskImage = (function () {
         };
     }
 
-    function makeDisk(format, tracks, sides, sectorsPerTrack, trackTable) {
-        return {
+    // raw is the buffer of raw sectors, or null for STX.
+    function makeDisk(format, tracks, sides, sectorsPerTrack, trackTable, raw) {
+        var disk = {
             format: format,
             tracks: tracks,
             sides: sides,
             sectorsPerTrack: sectorsPerTrack,
+            writable: raw != null,
             getTrack: function (track, side) {
                 var key = track * 2 + (side & 1);
                 return trackTable[key] || null;
+            },
+            written: function () {
+                disk.bytes = raw;
+                disk.format = 'ST';
             }
         };
+        return disk;
     }
 
     /* -------------------------------------------------------- raw sectors */
@@ -139,7 +149,7 @@ EstyJs.diskImage = (function () {
             }
         }
 
-        return makeDisk(format, geo.tracks, geo.sides, geo.sectors, trackTable);
+        return makeDisk(format, geo.tracks, geo.sides, geo.sectors, trackTable, data);
     }
 
     /* ----------------------------------------------------------------- MSA */
@@ -332,7 +342,7 @@ EstyJs.diskImage = (function () {
             offset += recordSize;
         }
 
-        return makeDisk('STX', maxTrack + 1, maxSide + 1, commonSectorCount, trackTable);
+        return makeDisk('STX', maxTrack + 1, maxSide + 1, commonSectorCount, trackTable, null);
     }
 
     /* --------------------------------------------------------------- entry */
@@ -352,7 +362,9 @@ EstyJs.diskImage = (function () {
         } else if (bytes[0] == 0x52 && bytes[1] == 0x53 && bytes[2] == 0x59 && bytes[3] == 0x00) {
             disk = decodeSTX(dataview, bytes);
         } else if (arrayBuffer.byteLength >= 512 && (arrayBuffer.byteLength % 512) == 0) {
-            //anything else is a raw sector dump, which has no signature
+            //anything else is a raw sector dump, which has no signature. A
+            //copy, since writing changes it.
+            bytes = bytes.slice(0);
             disk = fromRaw(bytes, 'ST');
         }
 

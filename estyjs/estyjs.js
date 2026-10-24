@@ -278,6 +278,23 @@ function EstyJs(output) {
 		fdc.loadFile(drive, file, callback);
 	}
 
+	// arrayBuffer null ejects. See fdc.insertDisk.
+	self.insertDisk = function (drive, arrayBuffer, writeProtected) {
+		return fdc.insertDisk(drive, arrayBuffer, writeProtected);
+	}
+
+	self.getDiskBytes = function (drive) {
+		return fdc.getDiskBytes(drive);
+	}
+
+	self.getDiskInfo = function (drive) {
+		return fdc.getDiskInfo(drive);
+	}
+
+	self.clearDirty = function (drive) {
+		fdc.clearDirty(drive);
+	}
+
 	self.openZipFile = function (drive, file, callback) {
 		function zipCallback(files) {
 			for (var i = 0; i < files.length; i++) {

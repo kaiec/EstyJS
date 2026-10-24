@@ -43,7 +43,8 @@ function extensionOf(name) {
 
 function describeDisk(result) {
 	return result.format + ', ' + result.tracks + ' tracks, ' +
-	       (result.sides > 1 ? 'double sided' : 'single sided');
+	       (result.sides > 1 ? 'double sided' : 'single sided') +
+	       (result.writeProtected ? ', write protected' : '');
 }
 
 // A file counts as inserted once it has been read, which is after the picker
