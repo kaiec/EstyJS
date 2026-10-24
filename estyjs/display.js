@@ -771,6 +771,9 @@ EstyJs.Display = function (opts) {
 
         }
 
+        //the RAM is replaced when its size changes or a state is loaded
+        ramDv = memory.getRamDv();
+
         self.beamRow = 0;
         screenRowStart = screenStart;
         rowCount = 0;
@@ -797,7 +800,8 @@ EstyJs.Display = function (opts) {
             return;
         }
 
-        if (screenRowStart < 0xfffff && (flipFlop)) {
+        //a screen beyond the end of RAM is not drawn, as after switching to 512K
+        if (screenRowStart + widths[screenMode & 3] <= ramDv.byteLength && (flipFlop)) {
             if (buf8 != null) {
                 optimisedScreenDraw();
                 if (!rowSkip && (screenMode & 3) < 2) optimisedScreenDraw();
