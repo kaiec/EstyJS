@@ -231,6 +231,49 @@ function EstyJs(output) {
 		snapshot.loadSnapshot(file);
 	}
 
+	// The machine between two frames. ROM and disks are kept apart from the
+	// rest, since many states share them.
+	//   machine   ArrayBuffer, see snapshot.encode
+	//   rom       Uint8Array
+	//   disks     {A: Uint8Array or null, B: ...}, the image files
+	self.saveState = function () {
+		return {
+			machine: snapshot.encode({
+				memory: memory.getState(),
+				processor: processor.getState(),
+				mfp: mfp.getState(),
+				fdc: fdc.getState(),
+				io: io.getState(),
+				display: display.getState(),
+				keyboard: keyboard.getState(),
+				sound: sound.getState()
+			}),
+			rom: memory.getRom(),
+			disks: { A: fdc.getDiskBytes('A'), B: fdc.getDiskBytes('B') }
+		};
+	}
+
+	// Throws, leaving the machine as it was, if the state is in another
+	// format.
+	self.restoreState = function (state) {
+		var s = snapshot.decode(state.machine);
+
+		memory.setRom(state.rom);
+		fdc.insertDisk('A', state.disks.A ? state.disks.A.slice(0).buffer : null);
+		fdc.insertDisk('B', state.disks.B ? state.disks.B.slice(0).buffer : null);
+
+		memory.setState(s.memory);
+		processor.setState(s.processor);
+		mfp.setState(s.mfp);
+		fdc.setState(s.fdc);
+		io.setState(s.io);
+		display.setState(s.display);
+		keyboard.setState(s.keyboard);
+		sound.setState(s.sound);
+
+		firstFrame = false;
+	}
+
 	self.openFloppyFile = function (drive, file, callback) {
 		fdc.loadFile(drive, file, callback);
 	}

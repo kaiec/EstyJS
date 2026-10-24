@@ -428,36 +428,86 @@ EstyJs.fdc = function (opts) {
         return status;
     }
 
+    // Returns what the image turned out to be, or that it was not a disk
+    // image. null ejects the disk.
+    self.insertDisk = function (drive, arrayBuffer) {
+        var target = drives[drive];
+        if (target == null) return { ok: false };
+
+        var disk = arrayBuffer == null ? null : EstyJs.diskImage.load(arrayBuffer);
+
+        target.disk = disk;
+        target.addressIndex = 0;
+
+        if (arrayBuffer == null) return { ok: false };
+
+        if (disk == null) {
+            bug.say("drive " + drive + ": not a readable disk image");
+            return { ok: false };
+        }
+
+        bug.say("drive " + drive + ": " + disk.format + " image, " + disk.tracks +
+                " tracks, " + disk.sides + " side(s), " + disk.sectorsPerTrack +
+                " sectors per track");
+
+        return {
+            ok: true,
+            format: disk.format,
+            tracks: disk.tracks,
+            sides: disk.sides,
+            sectorsPerTrack: disk.sectorsPerTrack
+        };
+    }
+
+    // A copy of the image in the drive, or null.
+    self.getDiskBytes = function (drive) {
+        var target = drives[drive];
+        if (target == null || target.disk == null) return null;
+        return new Uint8Array(target.disk.bytes);
+    }
+
     // Loading is asynchronous. callback reports what the file turned out to
     // be, or that it was not a disk image.
     self.loadFile = function (drive, filename, callback) {
-        var target = drives[drive];
-        if (target == null) return;
+        if (drives[drive] == null) return;
 
         fileManager.loadFile(filename, function (arrayBuffer) {
-            var disk = EstyJs.diskImage.load(arrayBuffer);
-
-            target.disk = disk;
-            target.addressIndex = 0;
-
-            if (disk == null) {
-                bug.say("drive " + drive + ": not a readable disk image");
-            } else {
-                bug.say("drive " + drive + ": " + disk.format + " image, " + disk.tracks +
-                        " tracks, " + disk.sides + " side(s), " + disk.sectorsPerTrack +
-                        " sectors per track");
-            }
-
-            if (callback) {
-                callback(disk == null ? { ok: false } : {
-                    ok: true,
-                    format: disk.format,
-                    tracks: disk.tracks,
-                    sides: disk.sides,
-                    sectorsPerTrack: disk.sectorsPerTrack
-                });
-            }
+            var result = self.insertDisk(drive, arrayBuffer);
+            if (callback) callback(result);
         });
+    }
+
+    // Registers and drive positions. The disks are saved apart from it.
+    self.getState = function () {
+        var state = {
+            selectedDrive: selectedDrive, aborted: aborted,
+            driveSide: driveSide, trackNo: trackNo, sectorNo: sectorNo,
+            sectorCount: sectorCount, dataReg: dataReg, stepDir: stepDir,
+            commandNo: commandNo, dmaAddr: dmaAddr,
+            commandCompleteTimer: commandCompleteTimer, dmaStatusReg: dmaStatusReg,
+            drives: {}
+        };
+        for (var name in drives) {
+            var d = drives[name];
+            state.drives[name] = {
+                currentTrack: d.currentTrack, status: d.status,
+                hblCount: d.hblCount, addressIndex: d.addressIndex
+            };
+        }
+        return state;
+    }
+
+    self.setState = function (state) {
+        selectedDrive = state.selectedDrive; aborted = state.aborted;
+        driveSide = state.driveSide; trackNo = state.trackNo; sectorNo = state.sectorNo;
+        sectorCount = state.sectorCount; dataReg = state.dataReg; stepDir = state.stepDir;
+        commandNo = state.commandNo; dmaAddr = state.dmaAddr;
+        commandCompleteTimer = state.commandCompleteTimer; dmaStatusReg = state.dmaStatusReg;
+        for (var name in drives) {
+            var d = drives[name], s = state.drives[name];
+            d.currentTrack = s.currentTrack; d.status = s.status;
+            d.hblCount = s.hblCount; d.addressIndex = s.addressIndex;
+        }
     }
 
     self.setMemory = function (mem) {

@@ -881,6 +881,25 @@ EstyJs.Display = function (opts) {
         }
     }
 
+    // Between frames. Row positions start again with the next frame.
+    self.getState = function () {
+        return {
+            syncMode: syncMode,
+            screenMode: screenMode,
+            screenStart: screenStart,
+            palette: new Uint8Array(palette8),
+            flipFlop: flipFlop
+        };
+    }
+
+    self.setState = function (state) {
+        syncMode = state.syncMode;
+        screenMode = state.screenMode;
+        screenStart = state.screenStart;
+        palette8.set(state.palette);
+        flipFlop = state.flipFlop;
+    }
+
     self.setRowSkip = function (val) {
         rowSkip = val;
     }

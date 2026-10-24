@@ -938,6 +938,52 @@ EstyJs.Keyboard = function (opts) {
         joystickMode = regs.joystickMode;
     }
 
+    // ACIA and IKBD. Mouse, buttons and joystick are included, since the IKBD
+    // reports them as changes against what it last saw. Pointer lock and the
+    // joystick switch belong to the page.
+    self.getState = function () {
+        return {
+            joystickPos: joystickPos,
+            clearToSend: clearToSend, rxRegisterFull: rxRegisterFull,
+            txRegisterEmpty: txRegisterEmpty, interrupt: interrupt, control: control,
+            mouseMode: mouseMode, mouseAction: mouseAction, port0Mouse: port0Mouse,
+            mouseXmax: mouseXmax, mouseYmax: mouseYmax,
+            mouseXkey: mouseXkey, mouseYkey: mouseYkey,
+            mouseXthreshold: mouseXthreshold, mouseYthreshold: mouseYthreshold,
+            invertY: invertY, paused: paused, joystickMode: joystickMode,
+            keyCommands: keyCommands.slice(0),
+            oldMouseX: oldMouseX, oldMouseY: oldMouseY, mouseX: mouseX, mouseY: mouseY,
+            leftDown: leftDown, rightDown: rightDown,
+            oldLeftDown: oldLeftDown, oldRightDown: oldRightDown,
+            absLeftDownSinceLast: absLeftDownSinceLast, absLeftUpSinceLast: absLeftUpSinceLast,
+            absRightDownSinceLast: absRightDownSinceLast, absRightUpSinceLast: absRightUpSinceLast,
+            resetTime: resetTime,
+            dataOut: dataOut.slice(0),
+            readData: readData, writeData: writeData
+        };
+    }
+
+    self.setState = function (state) {
+        joystickPos = state.joystickPos;
+        clearToSend = state.clearToSend; rxRegisterFull = state.rxRegisterFull;
+        txRegisterEmpty = state.txRegisterEmpty; interrupt = state.interrupt; control = state.control;
+        mouseMode = state.mouseMode; mouseAction = state.mouseAction; port0Mouse = state.port0Mouse;
+        mouseXmax = state.mouseXmax; mouseYmax = state.mouseYmax;
+        mouseXkey = state.mouseXkey; mouseYkey = state.mouseYkey;
+        mouseXthreshold = state.mouseXthreshold; mouseYthreshold = state.mouseYthreshold;
+        invertY = state.invertY; paused = state.paused; joystickMode = state.joystickMode;
+        keyCommands = state.keyCommands.slice(0);
+        oldMouseX = state.oldMouseX; oldMouseY = state.oldMouseY;
+        mouseX = state.mouseX; mouseY = state.mouseY;
+        leftDown = state.leftDown; rightDown = state.rightDown;
+        oldLeftDown = state.oldLeftDown; oldRightDown = state.oldRightDown;
+        absLeftDownSinceLast = state.absLeftDownSinceLast; absLeftUpSinceLast = state.absLeftUpSinceLast;
+        absRightDownSinceLast = state.absRightDownSinceLast; absRightUpSinceLast = state.absRightUpSinceLast;
+        resetTime = state.resetTime;
+        dataOut = state.dataOut.slice(0);
+        readData = state.readData; writeData = state.writeData;
+    }
+
     self.resetMouse = function() {
         self.moveMouse(640, 400)
         mouseX = display.readScreenMode()==0?319:639;

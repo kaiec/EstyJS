@@ -755,6 +755,49 @@ EstyJs.mfp = function (opts) {
 
     }
 
+    // The monitor is part of the state: a program started in high resolution
+    // stops when it finds a colour monitor.
+    self.getState = function () {
+        return {
+            gpio: gpio, monoMonitor: monoMonitor,
+            autoInterruptEnd: autoInterruptEnd, vectorReg: vectorReg,
+            timerControl: [timerAcontrol, timerBcontrol, timerCcontrol, timerDcontrol],
+            timerData: [timerAdata, timerBdata, timerCdata, timerDdata],
+            timerCntr: [timerAcntr, timerBcntr, timerCcntr, timerDcntr],
+            timerCntr2: [timerAcntr2, timerBcntr2, timerCcntr2, timerDcntr2],
+            timerDiv: [timerAdiv, timerBdiv, timerCdiv, timerDdiv],
+            interruptEnable: [interruptEnableA, interruptEnableB],
+            interruptPending: [interruptPendingA, interruptPendingB],
+            interruptInService: [interruptInServiceA, interruptInServiceB],
+            interruptMask: [interruptMaskA, interruptMaskB],
+            activeEdge: activeEdge, dataDirection: dataDirection,
+            usartControl: usartControl, usartTxStatus: usartTxStatus,
+            usartRxStatus: usartRxStatus, usartSyncChar: usartSyncChar, usartData: usartData
+        };
+    }
+
+    self.setState = function (state) {
+        gpio = state.gpio; monoMonitor = state.monoMonitor;
+        autoInterruptEnd = state.autoInterruptEnd; vectorReg = state.vectorReg;
+        timerAcontrol = state.timerControl[0]; timerBcontrol = state.timerControl[1];
+        timerCcontrol = state.timerControl[2]; timerDcontrol = state.timerControl[3];
+        timerAdata = state.timerData[0]; timerBdata = state.timerData[1];
+        timerCdata = state.timerData[2]; timerDdata = state.timerData[3];
+        timerAcntr = state.timerCntr[0]; timerBcntr = state.timerCntr[1];
+        timerCcntr = state.timerCntr[2]; timerDcntr = state.timerCntr[3];
+        timerAcntr2 = state.timerCntr2[0]; timerBcntr2 = state.timerCntr2[1];
+        timerCcntr2 = state.timerCntr2[2]; timerDcntr2 = state.timerCntr2[3];
+        timerAdiv = state.timerDiv[0]; timerBdiv = state.timerDiv[1];
+        timerCdiv = state.timerDiv[2]; timerDdiv = state.timerDiv[3];
+        interruptEnableA = state.interruptEnable[0]; interruptEnableB = state.interruptEnable[1];
+        interruptPendingA = state.interruptPending[0]; interruptPendingB = state.interruptPending[1];
+        interruptInServiceA = state.interruptInService[0]; interruptInServiceB = state.interruptInService[1];
+        interruptMaskA = state.interruptMask[0]; interruptMaskB = state.interruptMask[1];
+        activeEdge = state.activeEdge; dataDirection = state.dataDirection;
+        usartControl = state.usartControl; usartTxStatus = state.usartTxStatus;
+        usartRxStatus = state.usartRxStatus; usartSyncChar = state.usartSyncChar; usartData = state.usartData;
+    }
+
     self.setMonoMonitor = function(value) {
         monoMonitor = value;
     }

@@ -46,6 +46,25 @@ function createMachine(estyDir, opts = {}) {
         body: { addEventListener() {} }
     };
 
+    // Fuzzy bytes on STX disks read as Math.random(). A seeded generator makes
+    // them repeatable; see machine.seedRandom.
+    let seed = 1;
+    const math = Object.create(Math);
+    math.random = function () {
+        // mulberry32
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // The IKBD clock reads the host time. A fixed time makes runs repeatable.
+    const FIXED_TIME = Date.UTC(1987, 11, 24, 12, 0, 0);
+    class FixedDate extends Date {
+        constructor(...args) { super(...(args.length ? args : [FIXED_TIME])); }
+        static now() { return FIXED_TIME; }
+    }
+
     // Frames the emulator has scheduled but we have not run yet.
     const scheduled = [];
     let virtualMs = 0;
@@ -68,7 +87,8 @@ function createMachine(estyDir, opts = {}) {
             };
         },
         Uint8Array, Uint8ClampedArray, Uint32Array, Int32Array, Float32Array,
-        DataView, ArrayBuffer, Math, Date, JSON, Object, Array, String, Number
+        DataView, ArrayBuffer, Math: math, Date: FixedDate, JSON, Object, Array, String, Number,
+        TextEncoder, TextDecoder
     };
     sandbox.window = { console: sandbox.console, performance: sandbox.performance };
     sandbox.window.window = sandbox.window;
@@ -105,6 +125,8 @@ function createMachine(estyDir, opts = {}) {
             processRow()  { row++; },
             endFrame()    { frame++; },
             reset() { regIndex = 0; regs.fill(0); },
+            getState() { return { regIndex, regs: new Uint8Array(regs) }; },
+            setState(s) { regIndex = s.regIndex; regs.set(s.regs); },
             setProcessor(p) { cpu = p; },
             init() {},
             selectRegister(v) { regIndex = v & 0xff; },
@@ -154,6 +176,28 @@ function createMachine(estyDir, opts = {}) {
         return machine;
     };
 
+    // {machine, rom, disks}, as EstyJs.saveState returns it.
+    machine.saveState = function () {
+        return vm.runInContext('esty.saveState();', sandbox);
+    };
+
+    machine.restoreState = function (state) {
+        sandbox.__state = state;
+        vm.runInContext('esty.restoreState(__state);', sandbox);
+        delete sandbox.__state;
+        return machine;
+    };
+
+    machine.seedRandom = function (n) { seed = n | 0; return machine; };
+
+    // The machine part of a state as the tree of values it was encoded from.
+    machine.decodeState = function (buffer) {
+        sandbox.__buffer = buffer;
+        const state = vm.runInContext('EstyJs.SnapshotFile({}).decode(__buffer);', sandbox);
+        delete sandbox.__buffer;
+        return state;
+    };
+
     machine.reset = function () { vm.runInContext('esty.reset();', sandbox); return machine; };
 
     // rom is a path; the machine reads it through the same route as the page
@@ -161,6 +205,12 @@ function createMachine(estyDir, opts = {}) {
         const url = '__tos__';
         machine.files[url] = fs.readFileSync(rom);
         vm.runInContext(`esty.changeTOS("${url}");`, sandbox);
+        return machine;
+    };
+
+    // 1 MB when true, 512 KB when false, as the 1Meg box on the page.
+    machine.setMemory = function (oneMeg) {
+        vm.runInContext('esty.setMemory(' + (oneMeg ? 'true' : 'false') + ');', sandbox);
         return machine;
     };
 

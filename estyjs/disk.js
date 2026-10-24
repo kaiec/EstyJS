@@ -30,6 +30,7 @@ Current maintainer (since 2024): Kai Eckert
 //   disk.tracks            tracks per side
 //   disk.sectorsPerTrack   nominal, for reporting
 //   disk.getTrack(t, side) -> { sectors, image } or null if unformatted
+//   disk.bytes             the image file it was decoded from
 //
 // image is the raw track as read track returns it, STX only.
 //
@@ -343,19 +344,20 @@ EstyJs.diskImage = (function () {
         var dataview = new DataView(arrayBuffer);
         var bytes = new Uint8Array(arrayBuffer);
 
+        var disk = null;
+
         if (dataview.getUint16(0, false) == 0x0e0f) {
             var raw = decodeMSA(dataview);
-            return raw.length ? fromRaw(raw, 'MSA') : null;
+            if (raw.length) disk = fromRaw(raw, 'MSA');
+        } else if (bytes[0] == 0x52 && bytes[1] == 0x53 && bytes[2] == 0x59 && bytes[3] == 0x00) {
+            disk = decodeSTX(dataview, bytes);
+        } else if (arrayBuffer.byteLength >= 512 && (arrayBuffer.byteLength % 512) == 0) {
+            //anything else is a raw sector dump, which has no signature
+            disk = fromRaw(bytes, 'ST');
         }
 
-        if (bytes[0] == 0x52 && bytes[1] == 0x53 && bytes[2] == 0x59 && bytes[3] == 0x00) {
-            return decodeSTX(dataview, bytes);
-        }
-
-        //anything else is a raw sector dump, which has no signature
-        if (arrayBuffer.byteLength < 512 || (arrayBuffer.byteLength % 512) != 0) return null;
-
-        return fromRaw(bytes, 'ST');
+        if (disk != null) disk.bytes = bytes;
+        return disk;
     };
 
     return self;

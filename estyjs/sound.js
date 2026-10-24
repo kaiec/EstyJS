@@ -86,6 +86,9 @@ EstyJs.Sound = function (opts) {
     var writes = new Int32Array(INITIAL_WRITE_CAPACITY * WRITE_FIELDS);
     var writeCount = 0;
 
+    // Set by setState, so that the next frame brings the chip up to date.
+    var replayRegisters = false;
+
     // Cycle within the current frame at which the CPU is executing right now.
     function currentCycle() {
         var cycle = rowCount * CYCLES_PER_ROW;
@@ -132,6 +135,10 @@ EstyJs.Sound = function (opts) {
     self.startFrame = function () {
         rowCount = 0;
         writeCount = 0;
+        if (replayRegisters) {
+            for (var i = 0; i < 14; i++) recordWrite(i, regs[i]);
+            replayRegisters = false;
+        }
     };
 
     self.processRow = function () {
@@ -170,6 +177,19 @@ EstyJs.Sound = function (opts) {
         writeCount = 0;
         frameCount = 0;
         if (workletNode != null) workletNode.port.postMessage({ type: 'reset' });
+    };
+
+    // The chip in the worklet starts from reset and is sent the saved
+    // registers with the next frame. Tone and envelope phases are not saved.
+    self.getState = function () {
+        return { regIndex: regIndex, regs: new Uint8Array(regs) };
+    };
+
+    self.setState = function (state) {
+        self.reset();
+        regIndex = state.regIndex;
+        regs.set(state.regs);
+        replayRegisters = true;
     };
 
     self.setProcessor = function (p) {

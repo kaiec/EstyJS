@@ -4,9 +4,10 @@ Command line helpers in `tools/`, run from the repository root. Node only, no de
 part of the emulator and not served to the browser.
 
 `esty-headless.js` boots EstyJS under Node with the browser objects it touches stubbed out, and
-exposes `run(frames)`, `insertDisk`, `mouseTo`, `click`, `key`, `saveScreen` and `saveWrites`.
-Frames are pumped by hand, so runs are deterministic and about thirteen times faster than real time.
-The other tools are built on it.
+exposes `run(frames)`, `insertDisk`, `mouseTo`, `click`, `key`, `saveScreen`, `saveWrites`,
+`saveState` and `restoreState`. Frames are pumped by hand, so runs are deterministic and about
+thirteen times faster than real time. The host clock is fixed and `Math.random` is seeded
+(`seedRandom`). The other tools are built on it.
 
 ## Publishing
 
@@ -40,6 +41,7 @@ action. GitHub Pages rebuilds on push.
     node tools/check-picker.js
     node tools/check-disks.js [--check known.json] <image>...
     node tools/check-joystick.js <disk>
+    node tools/check-states.js [--boot N] [--after N] [--desktop] [--512k] [--mono] <image>...
 
 `check-docs` verifies that every page in the navigation exists, that every page is reachable, that
 links and images resolve, that marked parses every page, and that the website links to real pages.
@@ -65,6 +67,11 @@ against them, `--png DIR` writes the frames as raw RGBA.
 `check-joystick` measures the joystick switch through a game that responds to joystick 1 only: two
 identical machines, one key press, and whether the frames differ. Needs a disk that stops at a
 joystick prompt, such as Buggy Boy.
+
+`check-states` boots each image, saves the state and runs on. A fresh machine restores the state
+and runs the same frames with the same mouse, key and joystick input. Frame and state must come out
+the same, otherwise the first differing field is printed. The restoring machine starts as 1 MB with
+a colour monitor, so `--512k` and `--mono` check that a state carries both.
 
 ## Sound
 

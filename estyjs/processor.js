@@ -5639,6 +5639,43 @@ EstyJs.Processor = function (opts) {
         interrupt_req(6);
     }
 
+    // Everything the CPU carries from one frame to the next. The instruction
+    // table is built once and is not part of it.
+    self.getState = function () {
+        return {
+            d: new Int32Array(regs.d),
+            a: new Int32Array(regs.a),
+            t: regs.t, s: regs.s, intmask: regs.intmask,
+            x: regs.x, n: regs.n, z: regs.z, v: regs.v, c: regs.c,
+            usp: regs.usp, isp: regs.isp, pc: regs.pc, stopped: regs.stopped,
+            fault: { op: fault.op, pc: fault.pc, ad: fault.ad, ia: fault.ia },
+            prefetch1: prefetch1,
+            prefetch2: prefetch2,
+            totCycles: tot_cycles,
+            cpuCycles: cpu_cycles,
+            pendingInterrupts: new Uint8Array(pendingInterrupts),
+            trace: SPCFLAG_TRACE,
+            doTrace: SPCFLAG_DOTRACE
+        };
+    }
+
+    self.setState = function (state) {
+        regs.d.set(state.d);
+        regs.a.set(state.a);
+        regs.t = state.t; regs.s = state.s; regs.intmask = state.intmask;
+        regs.x = state.x; regs.n = state.n; regs.z = state.z; regs.v = state.v; regs.c = state.c;
+        regs.usp = state.usp; regs.isp = state.isp; regs.pc = state.pc; regs.stopped = state.stopped;
+        fault.op = state.fault.op; fault.pc = state.fault.pc;
+        fault.ad = state.fault.ad; fault.ia = state.fault.ia;
+        prefetch1 = state.prefetch1;
+        prefetch2 = state.prefetch2;
+        tot_cycles = state.totCycles;
+        cpu_cycles = state.cpuCycles;
+        pendingInterrupts.set(state.pendingInterrupts);
+        SPCFLAG_TRACE = state.trace;
+        SPCFLAG_DOTRACE = state.doTrace;
+    }
+
     self.setSnapshotRegs = function (regvalues) {
 
         setPC(regvalues.pc);

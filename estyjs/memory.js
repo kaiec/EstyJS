@@ -295,6 +295,28 @@ EstyJs.Memory = function (opts) {
         return ramDataView;
     }
 
+    // The RAM size of a state comes from its RAM.
+    self.getState = function () {
+        return { ram: new Uint8Array(ram.slice(0)) };
+    }
+
+    self.setState = function (state) {
+        ram = state.ram.slice(0).buffer;
+        ramDataView = new DataView(ram);
+    }
+
+    self.getRom = function () {
+        return new Uint8Array(rom.slice(0));
+    }
+
+    // Unlike changeTOS, this does not restart the machine.
+    self.setRom = function (bytes) {
+        rom = bytes.slice(0).buffer;
+        romDataView = new DataView(rom);
+        self.loaded = 1;
+        readTosHeader();
+    }
+
     self.changeTOS = function(file) {
         fileManager.loadFile(file, load_array_buffer)
     }
