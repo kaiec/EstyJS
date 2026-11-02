@@ -211,6 +211,10 @@ function EstyJs(output) {
 		return soundEnabled;
 	}
 
+	self.resumeSound = function () {
+		sound.resume();
+	}
+
 	// How far ahead of playback the sound is buffered, and the speed correction
 	// the audio thread is applying to keep it there. For diagnosing sound
 	// problems from the console.

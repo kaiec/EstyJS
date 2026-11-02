@@ -90,6 +90,43 @@ function soundToggle() {
 	}
 }
 
+// Apply options given in the page URL:
+// ?disk=<url> for drive A, ?diskb=<url> for drive B. The URL may point to a .st, .msa, .zip
+// or .sts file; another site must allow CORS.
+// ?sound=1 turns sound on. The browser only lets it play after the first click or key
+// press on the page, so it is resumed then.
+function loadFromUrlParams() {
+	var params = new URLSearchParams(window.location.search);
+	if (params.get('sound') == '1') {
+		soundToggle();
+		var resume = function () {
+			estyjs.resumeSound();
+			document.removeEventListener('keydown', resume, true);
+			document.removeEventListener('mousedown', resume, true);
+			document.removeEventListener('touchstart', resume, true);
+		};
+		document.addEventListener('keydown', resume, true);
+		document.addEventListener('mousedown', resume, true);
+		document.addEventListener('touchstart', resume, true);
+	}
+	var drives = { disk: 'A', diskb: 'B' };
+	for (var param in drives) {
+		var url = params.get(param);
+		if (!url) continue;
+		var drive = drives[param];
+		var path = new URL(url, window.location.href).pathname;
+		var ext = path.substr(path.lastIndexOf('.')).toLowerCase();
+		if (ext == '.sts') {
+			estyjs.openSnapshotFile(url);
+		} else if (ext == '.zip') {
+			estyjs.openZipFile(drive, url);
+		} else {
+			estyjs.openFloppyFile(drive, url);
+		}
+		document.querySelector(drive == 'A' ? "#floppy-1" : "#floppy-2").src = 'img/floppy-active.png';
+	}
+}
+
 function openFile(fname) {
     estyjs.openFloppyFile('A', fname);
 }

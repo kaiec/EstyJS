@@ -180,6 +180,12 @@ EstyJs.Sound = function (opts) {
         return status;
     };
 
+    // Browsers keep a context created before any user interaction suspended; call this
+    // from an input handler to start it.
+    self.resume = function () {
+        if (audioContext != null && audioContext.state == 'suspended') audioContext.resume();
+    };
+
     self.init = function () {
         if (audioContext != null || starting) return;
 
